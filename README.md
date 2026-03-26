@@ -1,4 +1,4 @@
-# <div align="center"> <img src="https://raw.githubusercontent.com/vikash0064/webingix/main/public/logo.svg" width="200" alt="WEBINGIX Logo"> <br> **WEBINGIX** </div>
+# <div align="center"> <img src="./public/logo.svg" width="220" alt="WEBINGIX Logo"> </div>
 
 <div align="center">
   <h3>✨ Elevating Digital Experiences through Visionary Design & High-Performance Development ✨</h3>
@@ -14,7 +14,7 @@
 ## 🎨 **The Experience**
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/vikash0064/webingix/main/public/screenshots/hero.png" width="90%" alt="WEBINGIX Hero UI Mockup" />
+  <img src="./public/screenshots/hero.png" width="90%" alt="WEBINGIX Hero UI Mockup" />
   <br>
   <em>High-Fidelity Monochrome Landing System</em>
 </div>
@@ -22,7 +22,7 @@
 <br>
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/vikash0064/webingix/main/public/screenshots/grid.png" width="90%" alt="WEBINGIX Projects UI Mockup" />
+  <img src="./public/screenshots/grid.png" width="90%" alt="WEBINGIX Projects UI Mockup" />
   <br>
   <em>Precision Grid & Storytelling Layouts</em>
 </div>
