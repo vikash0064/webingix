@@ -82,7 +82,6 @@ const Hero = () => {
                                     className="uppercase font-display text-white leading-[0.86] tracking-tighter"
                                 />
                             </div>
-                            <span className="block">AND DEVELOPERS</span>
                             <span className="block">WHO BUILD</span>
                             <div className="relative block pl-[10.2vw] mt-1 shrink-0 h-[1em]">
                                 <img

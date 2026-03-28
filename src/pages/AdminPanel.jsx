@@ -3,7 +3,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Trash2, LayoutGrid, Users, LogOut, CheckCircle, Image as ImageIcon, Briefcase, Check, Edit2, X } from 'lucide-react';
 
 const AdminPanel = ({ onLock }) => {
-    const [activeSection, setActiveSection] = useState('brands');
+    const [activeSection, setActiveSection] = useState('leads');
+    const [submissions, setSubmissions] = useState([]);
+    const [isLoadingSubmissions, setIsLoadingSubmissions] = useState(false);
     const [editingId, setEditingId] = useState(null);
 
     const [logos, setLogos] = useState(() => {
@@ -44,6 +46,27 @@ const AdminPanel = ({ onLock }) => {
     useEffect(() => { localStorage.setItem('team_members', JSON.stringify(team)); }, [team]);
     useEffect(() => { localStorage.setItem('gallery_images', JSON.stringify(gallery)); }, [gallery]);
     useEffect(() => { localStorage.setItem('projects_data', JSON.stringify(projects)); }, [projects]);
+
+    const fetchSubmissions = async () => {
+        setIsLoadingSubmissions(true);
+        try {
+            const response = await fetch('/api/admin/submissions', { credentials: 'include' });
+            if (response.ok) {
+                const data = await response.json();
+                setSubmissions(data.reverse());
+            }
+        } catch (err) {
+            console.error('Failed to fetch leads:', err);
+        } finally {
+            setIsLoadingSubmissions(false);
+        }
+    };
+
+    useEffect(() => {
+        if (activeSection === 'leads') {
+            fetchSubmissions();
+        }
+    }, [activeSection]);
 
     const triggerSuccess = () => {
         setShowSuccess(true);
@@ -168,16 +191,16 @@ const AdminPanel = ({ onLock }) => {
     };
 
     return (
-        <div className="min-h-screen bg-[#151515] text-[#F1F1F1] flex font-['Urbanist'] pt-24 md:pt-0">
-            <aside className="w-full md:w-64 border-r border-[#5C5C5C] md:h-screen fixed md:sticky top-0 z-50 bg-[#111] flex flex-row md:flex-col items-center md:items-stretch overflow-x-auto md:overflow-hidden px-4 md:px-0">
-                <div className="p-4 md:p-8 border-b border-[#5C5C5C] hidden md:block">
-                    <div className="flex items-center gap-3">
-                        <div className="w-6 h-6 bg-white text-black text-[10px] font-black flex items-center justify-center">W</div>
-                        <span className="font-display uppercase tracking-widest text-sm">ADMIN OS</span>
+        <div className="min-h-screen bg-[#151515] text-[#F1F1F1] flex flex-col md:flex-row font-['Urbanist'] pb-24 md:pb-0">
+            <aside className="w-full md:w-64 border-t md:border-t-0 md:border-r border-[#5C5C5C] md:h-screen fixed md:sticky bottom-0 md:top-0 z-50 bg-[#111] flex flex-row md:flex-col items-center md:items-stretch overflow-x-auto md:overflow-hidden px-4 md:px-0 bg-opacity-95 backdrop-blur-md md:bg-opacity-100">
+                <div className="p-4 md:px-8 md:py-16 border-b border-[#5C5C5C] hidden md:block">
+                    <div className="flex items-center justify-start">
+                        <img src="/logo.svg" alt="Webingix" className="h-14 w-auto brightness-200" />
                     </div>
                 </div>
                 <nav className="flex flex-row md:flex-col w-full p-2 md:p-4 gap-2">
                     {[
+                        { id: 'leads', icon: Users, label: 'Leads' },
                         { id: 'brands', icon: LayoutGrid, label: 'Brands' },
                         { id: 'team', icon: Users, label: 'Team' },
                         { id: 'gallery', icon: ImageIcon, label: 'Gallery' },
@@ -190,12 +213,12 @@ const AdminPanel = ({ onLock }) => {
                 </nav>
             </aside>
 
-            <main className="flex-1 min-h-screen">
+            <main className="flex-1 min-h-screen pt-0">
                 <header className="p-8 md:p-12 border-b border-[#5C5C5C]">
                     <div className="flex justify-between items-end">
                         <div>
                             <div className="flex gap-[0.5vw] text-[10px] font-black uppercase tracking-[0.4em] mb-4 text-[#5C5C5C]">
-                                <span>0{activeSection === 'brands' ? '1' : activeSection === 'team' ? '2' : activeSection === 'gallery' ? '3' : '4'}</span><span>/</span><span>Portal System</span>
+                                <span>0{activeSection === 'leads' ? '0' : activeSection === 'brands' ? '1' : activeSection === 'team' ? '2' : activeSection === 'gallery' ? '3' : '4'}</span><span>/</span><span>Portal System</span>
                             </div>
                             <h1 className="text-4xl md:text-7xl font-display uppercase tracking-tighter">
                                 {activeSection.toUpperCase()} Management
@@ -218,8 +241,31 @@ const AdminPanel = ({ onLock }) => {
 
                 <div className="grid grid-cols-1 lg:grid-cols-12">
                     <div className="lg:col-span-4 p-8 border-b lg:border-r border-[#5C5C5C] bg-[#111]">
-                        <h2 className="text-[10px] font-black uppercase tracking-widest text-[#5C5C5C] mb-8">{editingId ? 'Edit Protocol' : 'Entry Protocol'}</h2>
+                        <h2 className="text-[10px] font-black uppercase tracking-widest text-[#5C5C5C] mb-8">
+                            {activeSection === 'leads' ? 'Lead Hub' : editingId ? 'Edit Protocol' : 'Entry Protocol'}
+                        </h2>
 
+                        {activeSection === 'leads' && (
+                            <div className="space-y-6">
+                                <div className="p-4 bg-white/5 border border-[#5C5C5C] text-[10px] font-bold uppercase tracking-widest leading-relaxed">
+                                    All form submissions are automatically synced with the secure server database.
+                                </div>
+                                <button onClick={fetchSubmissions} className="w-full py-4 bg-white text-black font-black uppercase text-[10px] tracking-widest hover:bg-[#DDD] transition-colors">
+                                    Refresh Submissions
+                                </button>
+                                <div className="mt-8 pt-8 border-t border-white/10">
+                                    <div className="text-[9px] font-black uppercase tracking-widest text-[#5C5C5C] mb-4">Storage Info</div>
+                                    <div className="flex justify-between text-[11px] font-medium tracking-wide">
+                                        <span className="text-[#5C5C5C]">Database:</span>
+                                        <span>File System (CSV)</span>
+                                    </div>
+                                    <div className="flex justify-between text-[11px] font-medium tracking-wide mt-2">
+                                        <span className="text-[#5C5C5C]">Active Leads:</span>
+                                        <span>{submissions.length}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                         {activeSection === 'brands' && (
                             <form onSubmit={handleSaveLogo} className="space-y-6">
                                 <label className="block text-[10px] font-bold uppercase tracking-widest text-[#5C5C5C] mb-2">Logo Attachment</label>
@@ -285,6 +331,44 @@ const AdminPanel = ({ onLock }) => {
                     </div>
 
                     <div className="lg:col-span-8 bg-black">
+                        {activeSection === 'leads' && (
+                            <div className="p-4 md:p-8 overflow-x-auto border-l border-[#5C5C5C]">
+                                {isLoadingSubmissions ? (
+                                    <div className="py-20 text-center text-[10px] font-black uppercase tracking-widest text-[#5C5C5C]">
+                                        Retrieving Secure Leads...
+                                    </div>
+                                ) : submissions.length === 0 ? (
+                                    <div className="py-20 text-center text-[10px] font-black uppercase tracking-widest text-[#5C5C5C]">
+                                        No submissions registered yet.
+                                    </div>
+                                ) : (
+                                    <table className="w-full text-left border-collapse min-w-[800px]">
+                                        <thead>
+                                            <tr className="border-b border-[#5C5C5C]">
+                                                {['Date', 'Name', 'Method', 'Contact', 'Project', 'Timeline', 'Details'].map(h => (
+                                                    <th key={h} className="p-4 text-[10px] font-black uppercase tracking-widest text-[#5C5C5C]">{h}</th>
+                                                ))}
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {submissions.map((s, i) => (
+                                                <tr key={i} className="border-b border-[#5C5C5C]/30 hover:bg-white/5 transition-colors group">
+                                                    <td className="p-4 text-[10px] opacity-60 font-medium">{new Date(s.Timestamp).toLocaleDateString()}</td>
+                                                    <td className="p-4 text-[12px] font-bold uppercase tracking-wide group-hover:text-[#39FF14] transition-colors">{s.Name}</td>
+                                                    <td className="p-4 text-[10px]"><span className="px-2 py-0.5 bg-white/10 rounded uppercase tracking-tighter">{s.Method}</span></td>
+                                                    <td className="p-4 text-[11px] font-mono">{s['Phone/Email']}</td>
+                                                    <td className="p-4 text-[11px] font-medium">{s['Project Name']}</td>
+                                                    <td className="p-4 text-[10px] text-[#5C5C5C]">{s.Timeline}</td>
+                                                    <td className="p-4">
+                                                        <div className="max-w-[150px] truncate text-[10px] text-[#888]">{s.Details}</div>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                )}
+                            </div>
+                        )}
                         {activeSection === 'brands' && (
                             <div className="grid grid-cols-2 lg:grid-cols-4 border-l border-[#5C5C5C] bg-[linear-gradient(180deg,rgba(255,255,255,0.025),rgba(255,255,255,0))]">
                                 {logos.map(logo => (

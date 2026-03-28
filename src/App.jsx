@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
 import LocomotiveScroll from 'locomotive-scroll';
@@ -17,6 +18,7 @@ gsap.registerPlugin(ScrollTrigger);
 
 function App() {
   const location = useLocation();
+  const showHeader = location.pathname !== '/admin';
   const showFooter = location.pathname !== '/admin' && location.pathname !== '/contact';
 
   useEffect(() => {
@@ -55,7 +57,7 @@ function App() {
   return (
     <div className="min-h-screen bg-[#303030] md:bg-black text-white font-sans relative" style={{ fontFamily: "'Inter', sans-serif" }}>
       <BackgroundGrid />
-      <Header />
+      {showHeader && <Header />}
       <main className="relative z-10 w-full">
         <div className="mx-[10px] md:mx-0 bg-[#151515] md:bg-transparent min-h-screen md:min-h-0">
           <Routes>

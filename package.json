@@ -6,7 +6,7 @@
   "scripts": {
     "server": "node server/index.mjs",
     "dev:client": "vite",
-    "dev": "vite",
+    "dev": "node scripts/dev.js",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview"

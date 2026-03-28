@@ -7,6 +7,107 @@ import { fileURLToPath } from 'node:url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+const DIST_DIR = path.resolve(__dirname, '..', 'dist');
+const MIME_TYPES = {
+    '.html': 'text/html; charset=utf-8',
+    '.js': 'application/javascript; charset=utf-8',
+    '.css': 'text/css; charset=utf-8',
+    '.json': 'application/json; charset=utf-8',
+    '.svg': 'image/svg+xml',
+    '.png': 'image/png',
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.webp': 'image/webp',
+    '.avif': 'image/avif',
+    '.ico': 'image/x-icon',
+    '.woff': 'font/woff',
+    '.woff2': 'font/woff2',
+    '.ttf': 'font/ttf',
+    '.otf': 'font/otf',
+    '.eot': 'application/vnd.ms-fontobject',
+    '.mp4': 'video/mp4'
+};
+const IMMUTABLE_EXTENSIONS = new Set([
+    '.js',
+    '.css',
+    '.png',
+    '.jpg',
+    '.jpeg',
+    '.webp',
+    '.svg',
+    '.ico',
+    '.json',
+    '.woff',
+    '.woff2',
+    '.ttf',
+    '.otf',
+    '.eot',
+    '.mp4'
+]);
+
+const isPathInsideDir = (targetPath, dirPath) => {
+    if (!targetPath || !dirPath) {
+        return false;
+    }
+
+    const paddedDir = dirPath.endsWith(path.sep) ? dirPath : `${dirPath}${path.sep}`;
+    return targetPath === dirPath || targetPath.startsWith(paddedDir);
+};
+
+const getDistFilePath = (pathname) => {
+    if (!pathname) {
+        return null;
+    }
+
+    const relativeRequest = pathname === '/' ? 'index.html' : pathname.replace(/^\/+/, '');
+    const candidate = path.normalize(path.join(DIST_DIR, relativeRequest || 'index.html'));
+
+    return isPathInsideDir(candidate, DIST_DIR) ? candidate : null;
+};
+
+const sendDistFile = (res, filePath) => {
+    const ext = path.extname(filePath).toLowerCase();
+    const contentType = MIME_TYPES[ext] || 'application/octet-stream';
+    const cacheControl = ext === '.html'
+        ? 'no-cache'
+        : IMMUTABLE_EXTENSIONS.has(ext)
+            ? 'public, max-age=31536000, immutable'
+            : 'public, max-age=604800';
+
+    res.writeHead(200, {
+        'Content-Type': contentType,
+        'Cache-Control': cacheControl
+    });
+
+    const stream = fs.createReadStream(filePath);
+    stream.on('error', (error) => {
+        console.error('[admin-server] Static file stream error:', error);
+        if (!res.headersSent) {
+            res.writeHead(500);
+        }
+        res.end('Internal server error');
+    });
+    stream.pipe(res);
+};
+
+const tryServeDistFile = (res, pathname) => {
+    if (!fs.existsSync(DIST_DIR)) {
+        return false;
+    }
+
+    const filePath = getDistFilePath(pathname);
+    if (!filePath || !fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) {
+        return false;
+    }
+
+    sendDistFile(res, filePath);
+    return true;
+};
+
+if (!fs.existsSync(DIST_DIR)) {
+    console.warn(`[admin-server] Dist directory not found at ${DIST_DIR}. Front-end routes will return 404 until the client is built.`);
+}
+
 const loadEnvFile = (envPath) => {
     if (!fs.existsSync(envPath)) {
         return {};
@@ -34,7 +135,7 @@ const loadEnvFile = (envPath) => {
 const fileEnv = loadEnvFile(path.join(__dirname, '.env'));
 const env = { ...fileEnv, ...process.env };
 
-const PORT = Number(env.ADMIN_SERVER_PORT || 8787);
+const PORT = Number(env.ADMIN_SERVER_PORT || 8788);
 const CLIENT_ORIGIN = env.ADMIN_CLIENT_ORIGIN || 'http://localhost:5173';
 const SESSION_SECRET = env.ADMIN_SESSION_SECRET || 'change-me-in-server-env';
 const ADMIN_PIN = env.ADMIN_PIN || '';
@@ -164,6 +265,13 @@ const server = http.createServer(async (req, res) => {
     const origin = req.headers.origin || CLIENT_ORIGIN;
     const corsHeaders = createCorsHeaders(origin);
 
+    console.log(`[admin-server] ${req.method} ${req.url} (from ${origin})`);
+
+    const LOG_FILE = path.join(__dirname, 'submissions.csv');
+    if (!fs.existsSync(LOG_FILE)) {
+        fs.writeFileSync(LOG_FILE, 'Timestamp,Name,Method,Phone/Email,Project Name,Type,Timeline,Details\n');
+    }
+
     if (req.method === 'OPTIONS') {
         res.writeHead(204, corsHeaders);
         res.end();
@@ -171,6 +279,8 @@ const server = http.createServer(async (req, res) => {
     }
 
     const url = new URL(req.url || '/', `http://${req.headers.host}`);
+    const requestPath = url.pathname || '/';
+    const cleanPath = requestPath.replace(/\/$/, '') || '/';
 
     if (req.method === 'GET' && url.pathname === '/api/admin/session') {
         const cookies = parseCookies(req.headers.cookie);
@@ -220,9 +330,84 @@ const server = http.createServer(async (req, res) => {
         return;
     }
 
+    if (req.method === 'POST' && url.pathname === '/api/contact') {
+        try {
+            const body = await parseJsonBody(req);
+            const { name, contactMethod, phone, projectName, projectType, timeline, extraDetails, submittedAt } = body;
+            
+            const csvRow = [
+                submittedAt || new Date().toISOString(),
+                `"${(name || '').replace(/"/g, '""')}"`,
+                contactMethod,
+                `"${(phone || '').replace(/"/g, '""')}"`,
+                `"${(projectName || '').replace(/"/g, '""')}"`,
+                projectType,
+                timeline,
+                `"${(extraDetails || '').replace(/"/g, '""')}"`
+            ].join(',');
+
+            fs.appendFileSync(LOG_FILE, csvRow + '\n');
+            json(res, 200, { ok: true }, corsHeaders);
+        } catch (error) {
+            console.error('[admin-server] Error saving submission:', error);
+            json(res, 500, { error: 'Internal server error' }, corsHeaders);
+        }
+        return;
+    }
+
+    if (req.method === 'GET' && (cleanPath === '/api/admin/submissions' || cleanPath.endsWith('/submissions'))) {
+        const cookies = parseCookies(req.headers.cookie);
+        if (!isValidSessionToken(cookies[SESSION_COOKIE])) {
+            json(res, 401, { error: 'Unauthorized' }, corsHeaders);
+            return;
+        }
+
+        if (!fs.existsSync(LOG_FILE)) {
+            json(res, 200, [], corsHeaders);
+            return;
+        }
+
+        const lines = fs.readFileSync(LOG_FILE, 'utf8').split('\n').filter(Boolean);
+        const headers = lines[0].split(',');
+        const data = lines.slice(1).map(line => {
+            // Simple split by comma, respecting quotes for CSV
+            const parts = [];
+            let current = '';
+            let inQuotes = false;
+            for (let char of line) {
+                if (char === '"') inQuotes = !inQuotes;
+                else if (char === ',' && !inQuotes) {
+                    parts.push(current);
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+            parts.push(current);
+
+            return headers.reduce((acc, h, i) => {
+                acc[h] = parts[i] || '';
+                return acc;
+            }, {});
+        });
+
+        json(res, 200, data, corsHeaders);
+        return;
+    }
+
     if (req.method === 'GET' && url.pathname === '/api/health') {
         json(res, 200, { ok: true }, corsHeaders);
         return;
+    }
+
+    if (req.method === 'GET' && !cleanPath.startsWith('/api')) {
+        if (tryServeDistFile(res, requestPath)) {
+            return;
+        }
+
+        if (tryServeDistFile(res, '/')) {
+            return;
+        }
     }
 
     json(res, 404, { error: 'Not found' }, corsHeaders);
