@@ -392,9 +392,9 @@ const server = http.createServer(async (req, res) => {
     }
 
     // Front-end Static File Serving & SPA Routing
-    if (req.method === 'GET' && !cleanPath.startsWith('/api')) {
+    if ((req.method === 'GET' || req.method === 'HEAD') && !cleanPath.startsWith('/api')) {
         // Try exact file first
-        if (tryServeDistFile(res, requestPath)) {
+        if (tryServeDistFile(res, url.pathname)) {
             return;
         }
 
