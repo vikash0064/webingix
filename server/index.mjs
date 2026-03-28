@@ -135,7 +135,7 @@ const loadEnvFile = (envPath) => {
 const fileEnv = loadEnvFile(path.join(__dirname, '.env'));
 const env = { ...fileEnv, ...process.env };
 
-const PORT = Number(env.ADMIN_SERVER_PORT || 8788);
+const PORT = Number(process.env.PORT || env.ADMIN_SERVER_PORT || 8788);
 const CLIENT_ORIGIN = env.ADMIN_CLIENT_ORIGIN || 'http://localhost:5173';
 const SESSION_SECRET = env.ADMIN_SESSION_SECRET || 'change-me-in-server-env';
 const ADMIN_PIN = env.ADMIN_PIN || '';
@@ -265,7 +265,7 @@ const server = http.createServer(async (req, res) => {
     const origin = req.headers.origin || CLIENT_ORIGIN;
     const corsHeaders = createCorsHeaders(origin);
 
-    console.log(`[admin-server] ${req.method} ${req.url} (from ${origin})`);
+    console.log(`[admin-server] ${req.method} ${req.url}`);
 
     const LOG_FILE = path.join(__dirname, 'submissions.csv');
     if (!fs.existsSync(LOG_FILE)) {
@@ -278,14 +278,14 @@ const server = http.createServer(async (req, res) => {
         return;
     }
 
-    const url = new URL(req.url || '/', `http://${req.headers.host}`);
+    const url = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
     const requestPath = url.pathname || '/';
     const cleanPath = requestPath.replace(/\/$/, '') || '/';
 
+    // API Routes
     if (req.method === 'GET' && url.pathname === '/api/admin/session') {
         const cookies = parseCookies(req.headers.cookie);
-        json(res, 200, { authenticated: isValidSessionToken(cookies[SESSION_COOKIE]) }, corsHeaders);
-        return;
+        return json(res, 200, { authenticated: isValidSessionToken(cookies[SESSION_COOKIE]) }, corsHeaders);
     }
 
     if (req.method === 'POST' && url.pathname === '/api/admin/login') {
@@ -294,15 +294,14 @@ const server = http.createServer(async (req, res) => {
             const pin = String(body.pin || '');
 
             if (!verifyPin(pin)) {
-                json(res, 401, { error: 'Incorrect PIN' }, corsHeaders);
-                return;
+                return json(res, 401, { error: 'Incorrect PIN' }, corsHeaders);
             }
 
             const expiresAt = Date.now() + SESSION_TTL_MS;
             const token = createSessionToken(expiresAt);
             const secureFlag = origin.startsWith('https://') ? '; Secure' : '';
 
-            json(
+            return json(
                 res,
                 200,
                 { authenticated: true },
@@ -312,13 +311,12 @@ const server = http.createServer(async (req, res) => {
                 }
             );
         } catch {
-            json(res, 400, { error: 'Invalid request body' }, corsHeaders);
+            return json(res, 400, { error: 'Invalid request body' }, corsHeaders);
         }
-        return;
     }
 
     if (req.method === 'POST' && url.pathname === '/api/admin/logout') {
-        json(
+        return json(
             res,
             200,
             { authenticated: false },
@@ -327,7 +325,6 @@ const server = http.createServer(async (req, res) => {
                 'Set-Cookie': `${SESSION_COOKIE}=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0`
             }
         );
-        return;
     }
 
     if (req.method === 'POST' && url.pathname === '/api/contact') {
@@ -347,30 +344,26 @@ const server = http.createServer(async (req, res) => {
             ].join(',');
 
             fs.appendFileSync(LOG_FILE, csvRow + '\n');
-            json(res, 200, { ok: true }, corsHeaders);
+            return json(res, 200, { ok: true }, corsHeaders);
         } catch (error) {
             console.error('[admin-server] Error saving submission:', error);
-            json(res, 500, { error: 'Internal server error' }, corsHeaders);
+            return json(res, 500, { error: 'Internal server error' }, corsHeaders);
         }
-        return;
     }
 
     if (req.method === 'GET' && (cleanPath === '/api/admin/submissions' || cleanPath.endsWith('/submissions'))) {
         const cookies = parseCookies(req.headers.cookie);
         if (!isValidSessionToken(cookies[SESSION_COOKIE])) {
-            json(res, 401, { error: 'Unauthorized' }, corsHeaders);
-            return;
+            return json(res, 401, { error: 'Unauthorized' }, corsHeaders);
         }
 
         if (!fs.existsSync(LOG_FILE)) {
-            json(res, 200, [], corsHeaders);
-            return;
+            return json(res, 200, [], corsHeaders);
         }
 
         const lines = fs.readFileSync(LOG_FILE, 'utf8').split('\n').filter(Boolean);
         const headers = lines[0].split(',');
         const data = lines.slice(1).map(line => {
-            // Simple split by comma, respecting quotes for CSV
             const parts = [];
             let current = '';
             let inQuotes = false;
@@ -391,28 +384,35 @@ const server = http.createServer(async (req, res) => {
             }, {});
         });
 
-        json(res, 200, data, corsHeaders);
-        return;
+        return json(res, 200, data, corsHeaders);
     }
 
     if (req.method === 'GET' && url.pathname === '/api/health') {
-        json(res, 200, { ok: true }, corsHeaders);
-        return;
+        return json(res, 200, { ok: true }, corsHeaders);
     }
 
+    // Front-end Static File Serving & SPA Routing
     if (req.method === 'GET' && !cleanPath.startsWith('/api')) {
+        // Try exact file first
         if (tryServeDistFile(res, requestPath)) {
             return;
         }
 
+        // Catch-all: serve index.html for SPA routes (like /admin)
         if (tryServeDistFile(res, '/')) {
             return;
         }
     }
 
+    console.warn(`[admin-server] 404 for ${req.method} ${req.url}`);
     json(res, 404, { error: 'Not found' }, corsHeaders);
 });
 
-server.listen(PORT, () => {
-    console.log(`[admin-server] Listening on http://localhost:${PORT}`);
+server.listen(PORT, '0.0.0.0', () => {
+    console.log(`[admin-server] Listening on port ${PORT}`);
+    console.log(`[admin-server] Client path resolved to: ${DIST_DIR}`);
+    if (!fs.existsSync(DIST_DIR)) {
+        console.error(`[admin-server] ERROR: Dist directory not found at ${DIST_DIR}`);
+    }
 });
+
