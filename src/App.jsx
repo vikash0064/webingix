@@ -1,7 +1,7 @@
 
 import React, { useEffect } from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
-import LocomotiveScroll from 'locomotive-scroll';
+import Lenis from '@studio-freight/lenis';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import Header from './components/Header';
@@ -42,41 +42,56 @@ function App() {
   useEffect(() => {
     if (isPreloading) return;
 
-    let locomotiveScroll;
-    const ctx = gsap.context(() => {});
+    // ELITE SMOOTH SCROLL: Initialize Lenis for that premium 'expensive' feel
+    const lenis = new Lenis({
+      duration: 1.2,
+      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      orientation: 'vertical',
+      gestureOrientation: 'vertical',
+      smoothWheel: true,
+      wheelMultiplier: 1,
+      smoothTouch: false,
+      touchMultiplier: 2,
+      infinite: false,
+    });
 
-    // Ensure DOM is fully rendered after preloader has exited
-    const timer = setTimeout(() => {
-      locomotiveScroll = new LocomotiveScroll();
-      window.scrollTo(0, 0);
+    // Synchronize Lenis with GSAP ScrollTrigger
+    lenis.on('scroll', ScrollTrigger.update);
+    gsap.ticker.add((time) => {
+      lenis.raf(time * 1000);
+    });
+    gsap.ticker.lagSmoothing(0);
 
-      ctx.add(() => {
-        const revealElements = gsap.utils.toArray('.reveal');
-        revealElements.forEach((el) => {
-          gsap.fromTo(el,
-            { opacity: 0, y: 50 },
-            {
-              opacity: 1,
-              y: 0,
-              duration: 1,
-              ease: "power3.out",
-              scrollTrigger: {
-                trigger: el,
-                start: "top 85%",
-                end: "bottom 15%",
-                toggleActions: "play none none none",
-              }
+    const ctx = gsap.context(() => {
+      const revealElements = gsap.utils.toArray('.reveal');
+      revealElements.forEach((el) => {
+        gsap.fromTo(el,
+          { opacity: 0, y: 50 },
+          {
+            opacity: 1,
+            y: 0,
+            duration: 1,
+            ease: "power3.out",
+            scrollTrigger: {
+              trigger: el,
+              start: "top 85%",
+              toggleActions: "play none none none",
             }
-          );
-        });
+          }
+        );
       });
+    });
 
-      setTimeout(() => { ScrollTrigger.refresh(); }, 500);
-    }, 150);
+    // Wait for the DOM to settle after preloader fade-out
+    const timer = setTimeout(() => {
+      window.scrollTo(0, 0);
+      ScrollTrigger.refresh();
+    }, 100);
 
     return () => {
       clearTimeout(timer);
-      if (locomotiveScroll) locomotiveScroll.destroy();
+      lenis.destroy();
+      gsap.ticker.remove(lenis.raf);
       ctx.revert();
     };
   }, [location.pathname, isPreloading]);
@@ -100,8 +115,8 @@ function App() {
         <div className="mx-[10px] md:mx-0 bg-transparent min-h-screen md:min-h-0">
           {!isPreloading && (
             <Routes>
-              {/* PRIMARY LANDING SUCCESS: Swapping Home for AboutPage as your main entrance */}
-              <Route path="/" element={<AboutPage />} />
+              {/* HOME-FIRST RESTORED: Your stunning Home landing is the primary entrance again */}
+              <Route path="/" element={<Home />} />
               <Route path="/home" element={<Home />} />
               <Route path="/about" element={<AboutPage />} />
               <Route path="/services" element={<ServicesPage />} />

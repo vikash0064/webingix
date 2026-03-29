@@ -66,13 +66,13 @@ async function connectDB() {
         await mongoose.connect(MONGO_URI);
         console.log('[admin-server] MongoDB connected');
         
-        // Ensure indices for hyper-fast lookups
         await Project.collection.createIndex({ order: 1 });
         await Member.collection.createIndex({ order: 1 });
         await Submission.collection.createIndex({ timestamp: -1 });
 
         await seedProjects();
         await seedSocials();
+        await updateStaticCache();
     } catch (err) {
         console.error('[admin-server] MongoDB connection error:', err);
     }
@@ -195,6 +195,45 @@ const GalleryImg = mongoose.model('GalleryImg', GallerySchema);
 const SocialSchema = new mongoose.Schema({ name: String, url: String, order: Number });
 const Social = mongoose.model('Social', SocialSchema);
 
+const SettingSchema = new mongoose.Schema({ key: String, value: mongoose.Schema.Types.Mixed });
+const Setting = mongoose.model('Setting', SettingSchema);
+
+// ELITE STATIC CACHE: Store data in memory for sub-millisecond delivery
+let staticCache = {
+    projects: null,
+    logos: null,
+    team: null,
+    gallery: null,
+    socials: null,
+    isStatic: false
+};
+
+async function updateStaticCache() {
+    const s = await Setting.findOne({ key: 'isStaticMode' });
+    staticCache.isStatic = s ? !!s.value : false;
+    if (staticCache.isStatic) {
+        console.log('[admin-server] Static Mode ACTIVE - Warming cache...');
+        const [p, l, t, g, soc] = await Promise.all([
+            Project.find().sort({ order: 1 }),
+            Logo.find().sort({ order: 1 }),
+            Member.find().sort({ order: 1 }),
+            GalleryImg.find().sort({ order: 1 }),
+            Social.find().sort({ order: 1 })
+        ]);
+        staticCache.projects = p;
+        staticCache.logos = l;
+        staticCache.team = t;
+        staticCache.gallery = g;
+        staticCache.socials = soc;
+    } else {
+        staticCache.projects = null;
+        staticCache.logos = null;
+        staticCache.team = null;
+        staticCache.gallery = null;
+        staticCache.socials = null;
+    }
+}
+
 // --- Server Utils ---
 const isPathInsideDir = (targetPath, dirPath) => {
     if (!targetPath || !dirPath) return false;
@@ -301,26 +340,30 @@ const server = http.createServer(async (req, res) => {
         } catch { return json(res, 500, { error: 'Internal Error' }, corsHeaders); }
     }
 
-    // Public API: Content Retrieval
+    // Public API: Content Retrieval (CACHE-FIRST SUCCESS: Sub-millisecond data delivery)
     if (req.method === 'GET' && pathname === '/api/projects') {
-        const data = await Project.find().sort({ order: 1 });
+        const data = staticCache.isStatic && staticCache.projects ? staticCache.projects : await Project.find().sort({ order: 1 });
         return json(res, 200, data, corsHeaders);
     }
     if (req.method === 'GET' && pathname === '/api/logos') {
-        const data = await Logo.find().sort({ order: 1 });
+        const data = staticCache.isStatic && staticCache.logos ? staticCache.logos : await Logo.find().sort({ order: 1 });
         return json(res, 200, data, corsHeaders);
     }
     if (req.method === 'GET' && pathname === '/api/team') {
-        const data = await Member.find().sort({ order: 1 });
+        const data = staticCache.isStatic && staticCache.team ? staticCache.team : await Member.find().sort({ order: 1 });
         return json(res, 200, data, corsHeaders);
     }
     if (req.method === 'GET' && pathname === '/api/gallery') {
-        const data = await GalleryImg.find().sort({ order: 1 });
+        const data = staticCache.isStatic && staticCache.gallery ? staticCache.gallery : await GalleryImg.find().sort({ order: 1 });
         return json(res, 200, data, corsHeaders);
     }
     if (req.method === 'GET' && pathname === '/api/socials') {
-        const data = await Social.find().sort({ order: 1 });
+        const data = staticCache.isStatic && staticCache.socials ? staticCache.socials : await Social.find().sort({ order: 1 });
         return json(res, 200, data, corsHeaders);
+    }
+    if (req.method === 'GET' && pathname === '/api/settings') {
+        const s = await Setting.findOne({ key: 'isStaticMode' });
+        return json(res, 200, { isStaticMode: s ? !!s.value : false }, corsHeaders);
     }
 
     // Admin Auth
@@ -340,6 +383,14 @@ const server = http.createServer(async (req, res) => {
             return json(res, 401, { error: 'Unauthorized' }, corsHeaders);
         }
 
+        // Settings Toggle
+        if (req.method === 'POST' && pathname === '/api/admin/settings') {
+            const b = await parseJsonBody(req);
+            await Setting.findOneAndUpdate({ key: 'isStaticMode' }, { value: !!b.value }, { upsert: true });
+            await updateStaticCache();
+            return json(res, 200, { ok: true, isStaticMode: !!b.value }, corsHeaders);
+        }
+
         // Submissions
         if (req.method === 'GET' && pathname === '/api/admin/submissions') {
             const data = await Submission.find().sort({ timestamp: -1 });
@@ -353,6 +404,7 @@ const server = http.createServer(async (req, res) => {
                 b.image = await uploadToCloudinary(b.image, 'projects');
             }
             const p = await Project.create(b);
+            await updateStaticCache(); // REFRESH CACHE
             return json(res, 201, p, corsHeaders);
         }
         if (req.method === 'PUT' && pathname.startsWith('/api/admin/projects/')) {
@@ -364,6 +416,7 @@ const server = http.createServer(async (req, res) => {
                 b.image = await uploadToCloudinary(b.image, 'projects');
             }
             const p = await Project.findByIdAndUpdate(id, b, { new: true });
+            await updateStaticCache(); // REFRESH CACHE
             return json(res, 200, p, corsHeaders);
         }
         if (req.method === 'DELETE' && pathname.startsWith('/api/admin/projects/')) {
@@ -371,6 +424,7 @@ const server = http.createServer(async (req, res) => {
             const old = await Project.findById(id);
             if (old && old.image) await deleteFromCloudinary(old.image);
             await Project.findByIdAndDelete(id);
+            await updateStaticCache(); // REFRESH CACHE
             return json(res, 200, { ok: true }, corsHeaders);
         }
 
@@ -392,6 +446,7 @@ const server = http.createServer(async (req, res) => {
                     b[imgField] = await uploadToCloudinary(b[imgField], folder);
                 }
                 const d = await Model.create(b); 
+                await updateStaticCache(); // REFRESH CACHE
                 return json(res, 201, d, corsHeaders); 
             }
             if (pathname.startsWith(pathKey + '/')) {
@@ -406,12 +461,14 @@ const server = http.createServer(async (req, res) => {
                         b[imgField] = await uploadToCloudinary(b[imgField], folder);
                     }
                     const d = await Model.findByIdAndUpdate(id, b, { new: true }); 
+                    await updateStaticCache(); // REFRESH CACHE
                     return json(res, 200, d, corsHeaders);
                 }
                 if (req.method === 'DELETE') {
                     const old = await Model.findById(id);
                     if (imgField && old && old[imgField]) await deleteFromCloudinary(old[imgField]);
                     await Model.findByIdAndDelete(id); 
+                    await updateStaticCache(); // REFRESH CACHE
                     return json(res, 200, { ok: true }, corsHeaders);
                 }
             }

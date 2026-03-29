@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Trash2, LayoutGrid, Users, LogOut, CheckCircle, Image as ImageIcon, Briefcase, Check, Edit2, X, Share2, Globe, Phone, Mail } from 'lucide-react';
+import { Plus, Trash2, LayoutGrid, Users, LogOut, CheckCircle, Image as ImageIcon, Briefcase, Check, Edit2, X, Share2, Globe, Phone, Mail, Zap, ShieldCheck } from 'lucide-react';
 
 const PROJECTS_STORAGE_KEY = 'projects_data';
 const PROJECTS_UPDATE_EVENT = 'webingix:projects_data_updated';
@@ -11,6 +11,7 @@ const AdminPanel = ({ onLock }) => {
     const [isLoadingSubmissions, setIsLoadingSubmissions] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
     const [editingId, setEditingId] = useState(null);
+    const [isStaticMode, setIsStaticMode] = useState(false);
 
     const [logos, setLogos] = useState([]);
     const [team, setTeam] = useState([]);
@@ -20,17 +21,22 @@ const AdminPanel = ({ onLock }) => {
 
     const fetchData = async () => {
         try {
-            const [lRes, tRes, gRes, pRes, sRes] = await Promise.all([
+            const [lRes, tRes, gRes, pRes, sRes, setRes] = await Promise.all([
                 fetch('/api/logos'),
                 fetch('/api/team'),
                 fetch('/api/gallery'),
                 fetch('/api/projects'),
-                fetch('/api/socials')
+                fetch('/api/socials'),
+                fetch('/api/settings')
             ]);
             if (lRes.ok) setLogos(await lRes.json());
             if (tRes.ok) setTeam(await tRes.json());
             if (gRes.ok) setGallery(await gRes.json());
             if (sRes.ok) setSocials(await sRes.json());
+            if (setRes.ok) {
+                const sData = await setRes.json();
+                setIsStaticMode(sData.isStaticMode);
+            }
             if (pRes.ok) {
                 const data = await pRes.json();
                 setProjects(data);
@@ -63,6 +69,23 @@ const AdminPanel = ({ onLock }) => {
         } finally {
             setIsLoadingSubmissions(false);
         }
+    };
+
+    const toggleStaticMode = async (val) => {
+        setIsUploading(true);
+        try {
+            const res = await fetch('/api/admin/settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ value: val }),
+                credentials: 'include'
+            });
+            if (res.ok) {
+                const data = await res.json();
+                setIsStaticMode(data.isStaticMode);
+                triggerSuccess();
+            }
+        } finally { setIsUploading(false); }
     };
 
     const [newLogo, setNewLogo] = useState('');
@@ -201,6 +224,14 @@ const AdminPanel = ({ onLock }) => {
 
     return (
         <div className="min-h-screen bg-[#151515] text-[#F1F1F1] flex flex-col md:flex-row font-['Urbanist'] pb-24 md:pb-0">
+             <AnimatePresence>
+                {showSuccess && (
+                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }} className="fixed top-8 right-8 z-[100] bg-[#39FF14] text-black px-6 py-4 font-black uppercase tracking-[0.2em] text-[10px] flex items-center gap-3 shadow-2xl">
+                        <CheckCircle size={16} /> Update Deployed Successfully
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
             <aside className="w-full md:w-64 border-t md:border-t-0 md:border-r border-[#5C5C5C] md:h-screen fixed md:sticky bottom-0 md:top-0 z-50 bg-[#111] flex flex-row md:flex-col items-center md:items-stretch overflow-x-auto md:overflow-hidden px-4 md:px-0 bg-opacity-95 backdrop-blur-md md:bg-opacity-100">
                 <div className="p-4 md:px-8 md:py-16 border-b border-[#5C5C5C] hidden md:block">
                     <div className="flex items-center justify-start">
@@ -214,7 +245,8 @@ const AdminPanel = ({ onLock }) => {
                         { id: 'team', icon: Users, label: 'Team' },
                         { id: 'gallery', icon: ImageIcon, label: 'Gallery' },
                         { id: 'projects', icon: Briefcase, label: 'Projects' },
-                        { id: 'socials', icon: Share2, label: 'Socials' }
+                        { id: 'socials', icon: Share2, label: 'Socials' },
+                        { id: 'performance', icon: Zap, label: 'Performance' }
                     ].map((btn) => (
                         <button key={btn.id} onClick={() => { setActiveSection(btn.id); clearForm(); }} className={`flex-1 md:flex-none flex items-center justify-center md:justify-start gap-4 px-4 py-3 text-[10px] font-black uppercase tracking-widest transition-colors ${activeSection === btn.id ? 'bg-white text-black' : 'text-[#5C5C5C] hover:text-white'}`}>
                             <btn.icon size={14} /> <span className="hidden md:inline">{btn.label}</span>
@@ -228,13 +260,20 @@ const AdminPanel = ({ onLock }) => {
                     <div className="flex justify-between items-end">
                         <div>
                             <div className="flex gap-[0.5vw] text-[10px] font-black uppercase tracking-[0.4em] mb-4 text-[#5C5C5C]">
-                                <span>0{['leads','brands','team','gallery','projects','socials'].indexOf(activeSection)}</span><span>/</span><span>Portal System</span>
+                                <span>0{['leads','brands','team','gallery','projects','socials', 'performance'].indexOf(activeSection)}</span><span>/</span><span>Portal System</span>
                             </div>
                             <h1 className="text-4xl md:text-7xl font-display uppercase tracking-tighter">
                                 {activeSection.toUpperCase()} Management
                             </h1>
                         </div>
                         <div className="flex items-center gap-3">
+                            <button 
+                                onClick={() => toggleStaticMode(!isStaticMode)} 
+                                className={`flex items-center gap-2 px-4 py-2 border text-[10px] font-black uppercase tracking-widest transition-all ${isStaticMode ? 'bg-[#39FF14] text-black border-[#39FF14] hover:bg-black hover:text-[#39FF14]' : 'bg-white/5 border-[#5C5C5C] text-[#5C5C5C] hover:border-white hover:text-white'}`}
+                            >
+                                <Zap size={14} className={isStaticMode ? "animate-pulse" : ""} />
+                                {isStaticMode ? 'INFINITY FAST ENABLED' : 'DEPLOY AS STATIC'}
+                            </button>
                             {onLock && (
                                 <button onClick={onLock} className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-[#5C5C5C] text-white text-[10px] font-black uppercase tracking-widest hover:border-white hover:bg-white hover:text-black transition-all">
                                     <LogOut size={14} /> Lock Dashboard
@@ -252,13 +291,40 @@ const AdminPanel = ({ onLock }) => {
                 <div className="grid grid-cols-1 lg:grid-cols-12">
                     <div className="lg:col-span-4 p-8 border-b lg:border-r border-[#5C5C5C] bg-[#111]">
                         <h2 className="text-[10px] font-black uppercase tracking-widest text-[#5C5C5C] mb-8">
-                            {activeSection === 'leads' ? 'Lead Hub' : editingId ? 'Update Entry' : 'Manual Entry'}
+                            {activeSection === 'leads' ? 'Lead Hub' : activeSection === 'performance' ? 'Optimization Hub' : editingId ? 'Update Entry' : 'Manual Entry'}
                         </h2>
 
                         {activeSection === 'leads' && (
                             <div className="space-y-6">
                                 <div className="p-4 bg-white/5 border border-[#5C5C5C] text-[10px] font-bold uppercase tracking-widest leading-relaxed">System synchronizing with secure cluster...</div>
                                 <button onClick={fetchSubmissions} className="w-full py-4 border border-[#5C5C5C] text-white font-black uppercase text-[10px] tracking-widest hover:bg-white hover:text-black transition-colors">Force Refresh</button>
+                            </div>
+                        )}
+                        {activeSection === 'performance' && (
+                            <div className="space-y-6">
+                                <div className="p-6 border border-[#5C5C5C] bg-[#151515] relative overflow-hidden group">
+                                    <div className="relative z-10">
+                                        <div className="flex items-center gap-3 mb-4">
+                                            <Zap className={isStaticMode ? "text-[#39FF14]" : "text-[#5C5C5C]"} size={20} />
+                                            <span className="text-xs font-black uppercase tracking-[0.2em]">Static Mode Engine</span>
+                                        </div>
+                                        <p className="text-[10px] text-[#5C5C5C] uppercase font-bold leading-relaxed mb-6">
+                                            Freeze your CMS data into high-speed memory for sub-millisecond global delivery. No database calls. Zero latency.
+                                        </p>
+                                        <button 
+                                            onClick={() => toggleStaticMode(!isStaticMode)}
+                                            className={`w-full py-4 border flex items-center justify-center gap-3 transition-all font-black uppercase text-[10px] tracking-widest ${isStaticMode ? 'bg-[#39FF14] text-black border-[#39FF14]' : 'bg-transparent text-white border-[#5C5C5C] hover:border-white'}`}
+                                        >
+                                            {isStaticMode ? <ShieldCheck size={16} /> : <Zap size={16} />}
+                                            {isStaticMode ? 'Static Mode Enabled' : 'Deploy as Static'}
+                                        </button>
+                                    </div>
+                                    <div className={`absolute bottom-0 left-0 h-1 bg-[#39FF14] transition-all duration-500 ${isStaticMode ? 'w-full opacity-100' : 'w-0 opacity-0'}`} />
+                                </div>
+
+                                <div className="p-4 bg-white/5 border border-[#5C5C5C] text-[10px] font-bold uppercase tracking-widest leading-relaxed opacity-50 italic">
+                                    Note: Brand and Gallery media remain globally optimized via Cloudinary CDN regardless of this setting.
+                                </div>
                             </div>
                         )}
                         {activeSection === 'brands' && (
@@ -345,6 +411,21 @@ const AdminPanel = ({ onLock }) => {
                     </div>
 
                     <div className="lg:col-span-8 p-0">
+                        {activeSection === 'performance' && (
+                            <div className="p-12 h-full bg-black/20 flex flex-col items-center justify-center text-center">
+                                <div className={`w-32 h-32 rounded-full border-4 flex items-center justify-center mb-8 transition-colors ${isStaticMode ? 'border-[#39FF14] bg-[#39FF14]/5 text-[#39FF14]' : 'border-[#5C5C5C] text-[#5C5C5C]'}`}>
+                                    <Zap size={64} className={isStaticMode ? "animate-pulse" : ""} />
+                                </div>
+                                <h3 className="text-3xl font-display uppercase tracking-widest mb-4">
+                                    {isStaticMode ? 'Infinity-Fast Active' : 'Real-Time Dynamic Mode'}
+                                </h3>
+                                <p className="max-w-md text-[#5C5C5C] text-xs font-bold uppercase tracking-wider leading-relaxed">
+                                    {isStaticMode 
+                                        ? 'Your site is currently serving data from a high-speed memory snapshot. Database latencies are zero. Changes made in other sections will refresh the snapshot upon next deployment.' 
+                                        : 'Your site is currently fetching data directly from MongoDB. Useful for development and real-time content changes. Switch to Static Mode for production performance.'}
+                                </p>
+                            </div>
+                        )}
                         {activeSection === 'leads' && (
                             <div className="overflow-x-auto">
                                 <table className="w-full text-left border-collapse min-w-[600px]">
