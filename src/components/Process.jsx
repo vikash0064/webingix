@@ -124,45 +124,64 @@ const Process = () => {
     const containerRef = useRef();
     const headingRef = useRef();
 
-    useEffect(() => {
-        if (headingRef.current) {
-            gsap.fromTo(headingRef.current.querySelectorAll('.letter-anim'),
-                { y: 40, opacity: 0 },
-                {
-                    y: 0, opacity: 1,
-                    duration: 0.6,
-                    stagger: 0.04,
-                    ease: "power3.out",
-                    scrollTrigger: {
-                        trigger: headingRef.current,
-                        start: "top 85%",
-                        toggleActions: 'play reverse play reverse'
+    React.useLayoutEffect(() => {
+        const ctx = gsap.context(() => {
+            if (headingRef.current) {
+                gsap.fromTo(headingRef.current.querySelectorAll('.letter-anim'),
+                    { y: 40, opacity: 0 },
+                    {
+                        y: 0, opacity: 1,
+                        duration: 0.8,
+                        stagger: 0.03,
+                        ease: "power4.out",
+                        scrollTrigger: {
+                            trigger: headingRef.current,
+                            start: "top 90%",
+                            toggleActions: 'play none none none'
+                        }
                     }
-                }
-            );
-        }
+                );
+            }
+        });
+
+        const refreshAll = () => {
+            setTimeout(() => ScrollTrigger.refresh(), 200);
+        };
+
+        window.addEventListener('webingix:projects_data_updated', refreshAll);
+        return () => {
+            ctx.revert();
+            window.removeEventListener('webingix:projects_data_updated', refreshAll);
+        };
     }, []);
 
     const splitText = (text) => {
-        return text.split('').map((char, index) => (
-            <span key={index} className="inline-block letter-anim">
-                {char === ' ' ? '\u00A0' : char}
-            </span>
+        return text.split(' ').map((word, wIdx) => (
+            <div key={wIdx} className="word inline-block mr-[0.12em] overflow-hidden align-top">
+                {word.split('').map((char, cIdx) => (
+                    <span key={cIdx} className="char inline-block letter-anim">
+                        {char}
+                    </span>
+                ))}
+            </div>
         ));
     };
 
     return (
-        <section ref={containerRef} className="bg-transparent pt-[6vw] pb-[4vw] relative z-20 overflow-hidden font-sans">
+        <section ref={containerRef} className="hidden md:block bg-transparent pt-10 md:pt-16 pb-[4vw] relative z-20 overflow-hidden font-sans">
             {/* Header Section */}
             <div className="container mx-auto px-6 md:px-[4vw] max-w-[1800px] relative z-10 pointer-events-none mb-[8vw]">
                 <div className="flex items-center text-white text-[11px] md:text-[min(1.3vw,15px)] font-medium tracking-[0.3em] uppercase mb-[2vw]">
                     <span>04 / HOW WE WORK</span>
                 </div>
 
-                <div className="flex flex-col md:flex-row md:items-end gap-[1vw]">
-                    <h2 ref={headingRef} className="text-[clamp(2rem,7.2vw,8.5rem)] leading-[0.85] font-display font-medium text-white uppercase tracking-tighter whitespace-nowrap flex">
-                        {splitText('OUR PROCESS')}
+                <div ref={headingRef} className="flex flex-col md:flex-row md:items-end gap-[0.25vw] md:pl-[2vw]">
+                    <h2 className="text-[clamp(1.5rem,7.2vw,8.5rem)] leading-[0.85] font-display font-normal text-white uppercase tracking-tighter whitespace-nowrap flex">
+                        {splitText('HOW WE WORK')}
                     </h2>
+                    <span className="text-[clamp(0.8rem,2.4vw,2.5rem)] leading-none font-display font-medium text-[#39ff14] uppercase tracking-tighter mb-[0.8vw] flex mt-2 md:mt-0 md:ml-[-0.8vw]">
+                        {splitText('/OUR PROCESS')}
+                    </span>
                 </div>
             </div>
 

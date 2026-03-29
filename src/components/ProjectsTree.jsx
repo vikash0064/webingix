@@ -43,16 +43,42 @@ const ProjectsTree = () => {
     // Projects will be loaded dynamically (e.g., from admin panel or API)
     const [projects, setProjects] = useState([]);
 
-    // Example: Load from localStorage (admin panel can save here)
-    useEffect(() => {
+    const fetchProjects = async () => {
         try {
-            const saved = localStorage.getItem('projects_data');
-            if (saved) {
-                setProjects(JSON.parse(saved));
+            const res = await fetch('/api/projects');
+            if (res.ok) {
+                const data = await res.json();
+                if (data.length > 0) setProjects(data);
+                setTimeout(() => ScrollTrigger.refresh(), 150);
+                return;
             }
         } catch (error) {
-            console.error('Failed to load projects_data from localStorage', error);
+            console.error('Failed to load projects from API', error);
         }
+
+        // Fallback to locally cached projects if API is unreachable
+        try {
+            const cached = JSON.parse(localStorage.getItem('projects_data') || '[]');
+            if (Array.isArray(cached) && cached.length > 0) {
+                setProjects(cached);
+                setTimeout(() => ScrollTrigger.refresh(), 150);
+            }
+        } catch (e) {
+            console.warn('No cached projects available');
+        }
+    };
+
+    useEffect(() => {
+        fetchProjects();
+        const handleUpdate = () => fetchProjects();
+        window.addEventListener('webingix:projects_data_updated', handleUpdate);
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'webingix_cms_last_sync') handleUpdate();
+        });
+        return () => {
+            window.removeEventListener('webingix:projects_data_updated', handleUpdate);
+            window.removeEventListener('storage', handleUpdate);
+        };
     }, []);
 
     const displayProjects = projects.length > 0 ? projects : fallbackProjects;

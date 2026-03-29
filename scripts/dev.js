@@ -6,7 +6,7 @@ import { spawn } from 'node:child_process';
 const spawnProcess = (command, args = []) => {
     const proc = spawn(command, args, {
         stdio: 'inherit',
-        shell: false
+        shell: true // Changed from false to true for Windows compatibility
     });
 
     proc.on('error', (error) => {
@@ -22,8 +22,10 @@ const killProcess = (proc) => {
     }
 };
 
+const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+
 const server = spawnProcess('node', [path.join('server', 'index.mjs')]);
-const client = spawnProcess('npm', ['run', 'dev:client']);
+const client = spawnProcess(npmCmd, ['run', 'dev:client']);
 
 const shutdown = (code = 0) => {
     killProcess(server);

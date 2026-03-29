@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Trash2, LayoutGrid, Users, LogOut, CheckCircle, Image as ImageIcon, Briefcase, Check, Edit2, X } from 'lucide-react';
+import { Plus, Trash2, LayoutGrid, Users, LogOut, CheckCircle, Image as ImageIcon, Briefcase, Check, Edit2, X, Share2, Globe, Phone, Mail } from 'lucide-react';
+
+const PROJECTS_STORAGE_KEY = 'projects_data';
+const PROJECTS_UPDATE_EVENT = 'webingix:projects_data_updated';
 
 const AdminPanel = ({ onLock }) => {
     const [activeSection, setActiveSection] = useState('leads');
@@ -8,44 +11,43 @@ const AdminPanel = ({ onLock }) => {
     const [isLoadingSubmissions, setIsLoadingSubmissions] = useState(false);
     const [editingId, setEditingId] = useState(null);
 
-    const [logos, setLogos] = useState(() => {
-        const saved = localStorage.getItem('client_logos');
-        return saved ? JSON.parse(saved) : [];
-    });
+    const [logos, setLogos] = useState([]);
+    const [team, setTeam] = useState([]);
+    const [gallery, setGallery] = useState([]);
+    const [projects, setProjects] = useState([]);
+    const [socials, setSocials] = useState([]);
 
-    const [team, setTeam] = useState(() => {
-        const saved = localStorage.getItem('team_members');
-        const defaultTeam = [
-            { id: 'RF00', name: 'Ashwin D', title: 'Director of Miscellaneous Things', tags: ['Finance', 'Accounts', 'Marketing', 'Sales', 'Development', 'HR'], photo: '' },
-            { id: 'RF07', name: 'Uday Rathore', title: 'Creative Director', tags: ['Art Director', 'Design Critique'], photo: '' }
-        ];
-        return saved ? JSON.parse(saved) : defaultTeam;
-    });
+    const fetchData = async () => {
+        try {
+            const [lRes, tRes, gRes, pRes, sRes] = await Promise.all([
+                fetch('/api/logos'),
+                fetch('/api/team'),
+                fetch('/api/gallery'),
+                fetch('/api/projects'),
+                fetch('/api/socials')
+            ]);
+            if (lRes.ok) setLogos(await lRes.json());
+            if (tRes.ok) setTeam(await tRes.json());
+            if (gRes.ok) setGallery(await gRes.json());
+            if (sRes.ok) setSocials(await sRes.json());
+            if (pRes.ok) {
+                const data = await pRes.json();
+                setProjects(data);
+                localStorage.setItem('projects_data', JSON.stringify(data));
+                localStorage.setItem('webingix_cms_last_sync', Date.now().toString());
+                window.dispatchEvent(new CustomEvent('webingix:projects_data_updated'));
+            }
+        } catch (err) {
+            console.error('Failed to fetch data:', err);
+        }
+    };
 
-    const [gallery, setGallery] = useState(() => {
-        const saved = localStorage.getItem('gallery_images');
-        return saved ? JSON.parse(saved) : [];
-    });
-
-    const [projects, setProjects] = useState(() => {
-        const saved = localStorage.getItem('projects_data');
-        const defaultProjects = [
-            { id: '01', title: 'RetailCo', clientMsg: 'We need a futuristic shopping experience with smooth animations and fast checkout.', ourMsg: "Let's build it with React + Three.js. This one's going to be spectacular! 🚀", time: '2 h', avatar: 'R' },
-            { id: '02', title: 'TravelMind', clientMsg: 'Build an AI-powered app that generates custom travel itineraries for users.', ourMsg: 'Integrating GPT + Maps API. Buckle up, this trip planner will be legendary! 🗺️', time: '5 h', avatar: 'T' }
-        ];
-        return saved ? JSON.parse(saved) : defaultProjects;
-    });
-
-    const [newLogo, setNewLogo] = useState('');
-    const [newMember, setNewMember] = useState({ id: '', name: '', title: '', tags: '', photo: '' });
-    const [newGalleryImg, setNewGalleryImg] = useState('');
-    const [newProject, setNewProject] = useState({ title: '', clientMsg: '', ourMsg: '', time: '', image: '', desc: '', tags: '' });
-    const [showSuccess, setShowSuccess] = useState(false);
-
-    useEffect(() => { localStorage.setItem('client_logos', JSON.stringify(logos)); }, [logos]);
-    useEffect(() => { localStorage.setItem('team_members', JSON.stringify(team)); }, [team]);
-    useEffect(() => { localStorage.setItem('gallery_images', JSON.stringify(gallery)); }, [gallery]);
-    useEffect(() => { localStorage.setItem('projects_data', JSON.stringify(projects)); }, [projects]);
+    useEffect(() => {
+        fetchData();
+        const handleNewLead = () => { if (activeSection === 'leads') fetchSubmissions(); };
+        window.addEventListener('webingix:new_lead_submitted', handleNewLead);
+        return () => window.removeEventListener('webingix:new_lead_submitted', handleNewLead);
+    }, [activeSection]);
 
     const fetchSubmissions = async () => {
         setIsLoadingSubmissions(true);
@@ -53,7 +55,7 @@ const AdminPanel = ({ onLock }) => {
             const response = await fetch('/api/admin/submissions', { credentials: 'include' });
             if (response.ok) {
                 const data = await response.json();
-                setSubmissions(data.reverse());
+                setSubmissions(data);
             }
         } catch (err) {
             console.error('Failed to fetch leads:', err);
@@ -62,11 +64,12 @@ const AdminPanel = ({ onLock }) => {
         }
     };
 
-    useEffect(() => {
-        if (activeSection === 'leads') {
-            fetchSubmissions();
-        }
-    }, [activeSection]);
+    const [newLogo, setNewLogo] = useState('');
+    const [newMember, setNewMember] = useState({ id: '', name: '', title: '', tags: '', photo: '' });
+    const [newGalleryImg, setNewGalleryImg] = useState('');
+    const [newProject, setNewProject] = useState({ id: '', title: '', clientMsg: '', ourMsg: '', time: '', image: '', desc: '', tags: '' });
+    const [newSocial, setNewSocial] = useState({ name: '', url: '' });
+    const [showSuccess, setShowSuccess] = useState(false);
 
     const triggerSuccess = () => {
         setShowSuccess(true);
@@ -78,102 +81,92 @@ const AdminPanel = ({ onLock }) => {
         setNewLogo('');
         setNewMember({ id: '', name: '', title: '', tags: '', photo: '' });
         setNewGalleryImg('');
-        setNewProject({ title: '', clientMsg: '', ourMsg: '', time: '', image: '', desc: '', tags: '' });
+        setNewProject({ id: '', title: '', clientMsg: '', ourMsg: '', time: '', image: '', desc: '', tags: '' });
+        setNewSocial({ name: '', url: '' });
     };
 
-    const handleSaveLogo = (e) => {
+    const handleSaveLogo = async (e) => {
         e.preventDefault();
         if (newLogo) {
-            if (editingId) {
-                setLogos(logos.map(l => l.id === editingId ? { ...l, url: newLogo } : l));
-            } else {
-                setLogos([...logos, { id: Date.now(), url: newLogo }]);
-            }
-            clearForm();
-            triggerSuccess();
+            const url = editingId ? `/api/admin/logos/${editingId}` : '/api/admin/logos';
+            const method = editingId ? 'PUT' : 'POST';
+            const res = await fetch(url, {
+                method, headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url: newLogo, order: logos.length }), credentials: 'include'
+            });
+            if (res.ok) { await fetchData(); clearForm(); triggerSuccess(); }
         }
     };
 
-    const handleSaveMember = (e) => {
+    const handleSaveMember = async (e) => {
         e.preventDefault();
         if (newMember.name && newMember.id) {
             const memberData = { ...newMember, tags: Array.isArray(newMember.tags) ? newMember.tags : newMember.tags.split(',').map(t => t.trim()) };
-            if (editingId) {
-                setTeam(team.map(m => m.id === editingId ? memberData : m));
-            } else {
-                setTeam([...team, memberData]);
-            }
-            clearForm();
-            triggerSuccess();
+            const url = editingId ? `/api/admin/team/${editingId}` : '/api/admin/team';
+            const method = editingId ? 'PUT' : 'POST';
+            const res = await fetch(url, {
+                method, headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ...memberData, order: team.length }), credentials: 'include'
+            });
+            if (res.ok) { await fetchData(); clearForm(); triggerSuccess(); }
         }
     };
 
-    const handleSaveGallery = (e) => {
+    const handleSaveGallery = async (e) => {
         e.preventDefault();
         if (newGalleryImg) {
-            if (editingId) {
-                setGallery(gallery.map(img => img.id === editingId ? { ...img, url: newGalleryImg } : img));
-            } else {
-                setGallery([...gallery, { id: Date.now(), url: newGalleryImg }]);
-            }
-            clearForm();
-            triggerSuccess();
+            const url = editingId ? `/api/admin/gallery/${editingId}` : '/api/admin/gallery';
+            const method = editingId ? 'PUT' : 'POST';
+            const res = await fetch(url, {
+                method, headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url: newGalleryImg, order: gallery.length }), credentials: 'include'
+            });
+            if (res.ok) { await fetchData(); clearForm(); triggerSuccess(); }
         }
     };
 
-    const handleSaveProject = (e) => {
+    const handleSaveProject = async (e) => {
         e.preventDefault();
-        if (newProject.title && newProject.clientMsg) {
+        if (newProject.title) {
             const projectData = {
                 ...newProject,
-                avatar: newProject.title.charAt(0).toUpperCase(),
-                desc: newProject.desc || newProject.clientMsg,
-                tags: Array.isArray(newProject.tags)
-                    ? newProject.tags
-                    : (newProject.tags || '').split(',').map((t) => t.trim()).filter(Boolean)
+                id: newProject.id || (projects.length + 1).toString().padStart(2, '0'),
+                tags: Array.isArray(newProject.tags) ? newProject.tags : (newProject.tags || '').split(',').map(t => t.trim()).filter(Boolean)
             };
-            if (editingId) {
-                setProjects(projects.map(p => p.id === editingId ? { ...projectData, id: editingId } : p));
-            } else {
-                const id = (projects.length + 1).toString().padStart(2, '0');
-                setProjects([...projects, { ...projectData, id }]);
-            }
-            clearForm();
-            triggerSuccess();
+            const url = editingId ? `/api/admin/projects/${editingId}` : '/api/admin/projects';
+            const method = editingId ? 'PUT' : 'POST';
+            const res = await fetch(url, {
+                method, headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ...projectData, order: projects.length }), credentials: 'include'
+            });
+            if (res.ok) { await fetchData(); clearForm(); triggerSuccess(); }
         }
     };
 
-    const startEditingLogo = (logo) => {
-        setActiveSection('brands');
-        setEditingId(logo.id);
-        setNewLogo(logo.url);
+    const handleSaveSocial = async (e) => {
+        e.preventDefault();
+        if (newSocial.name && newSocial.url) {
+            const url = editingId ? `/api/admin/socials/${editingId}` : '/api/admin/socials';
+            const method = editingId ? 'PUT' : 'POST';
+            const res = await fetch(url, {
+                method, headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ...newSocial, order: socials.length }), credentials: 'include'
+            });
+            if (res.ok) { await fetchData(); clearForm(); triggerSuccess(); }
+        }
     };
 
-    const startEditingMember = (member) => {
-        setActiveSection('team');
-        setEditingId(member.id);
-        const safeTags = Array.isArray(member.tags) ? member.tags.join(', ') : (member.tags || '');
-        setNewMember({ ...member, tags: safeTags });
-    };
+    const startEditingLogo = (logo) => { setActiveSection('brands'); setEditingId(logo._id); setNewLogo(logo.url); };
+    const startEditingMember = (member) => { setActiveSection('team'); setEditingId(member._id); const safeTags = Array.isArray(member.tags) ? member.tags.join(', ') : (member.tags || ''); setNewMember({ ...member, tags: safeTags }); };
+    const startEditingGallery = (img) => { setActiveSection('gallery'); setEditingId(img._id); setNewGalleryImg(img.url); };
+    const startEditingProject = (p) => { setActiveSection('projects'); setEditingId(p._id); setNewProject({ ...p, tags: Array.isArray(p.tags) ? p.tags.join(', ') : (p.tags || '') }); };
+    const startEditingSocial = (s) => { setActiveSection('socials'); setEditingId(s._id); setNewSocial({ name: s.name, url: s.url }); };
 
-    const startEditingGallery = (img) => {
-        setActiveSection('gallery');
-        setEditingId(img.id);
-        setNewGalleryImg(img.url);
-    };
-
-    const startEditingProject = (p) => {
-        setActiveSection('projects');
-        setEditingId(p.id);
-        setNewProject({
-            title: p.title,
-            clientMsg: p.clientMsg,
-            ourMsg: p.ourMsg,
-            time: p.time,
-            image: p.image || '',
-            desc: p.desc || '',
-            tags: Array.isArray(p.tags) ? p.tags.join(', ') : (p.tags || '')
-        });
+    const handleDelete = async (section, id) => {
+        if (!window.confirm('Are you sure you want to delete this?')) return;
+        const url = `/api/admin/${section}/${id}`;
+        const res = await fetch(url, { method: 'DELETE', credentials: 'include' });
+        if (res.ok) fetchData();
     };
 
     const handleFileUpload = (e, type) => {
@@ -204,21 +197,22 @@ const AdminPanel = ({ onLock }) => {
                         { id: 'brands', icon: LayoutGrid, label: 'Brands' },
                         { id: 'team', icon: Users, label: 'Team' },
                         { id: 'gallery', icon: ImageIcon, label: 'Gallery' },
-                        { id: 'projects', icon: Briefcase, label: 'Projects' }
+                        { id: 'projects', icon: Briefcase, label: 'Projects' },
+                        { id: 'socials', icon: Share2, label: 'Socials' }
                     ].map((btn) => (
-                        <button key={btn.id} onClick={() => { setActiveSection(btn.id); clearForm(); }} className={`flex-1 md:flex-none flex items-center gap-3 px-4 py-3 text-[10px] font-black uppercase tracking-widest transition-colors ${activeSection === btn.id ? 'bg-white text-black' : 'text-[#5C5C5C] hover:text-white'}`}>
+                        <button key={btn.id} onClick={() => { setActiveSection(btn.id); clearForm(); }} className={`flex-1 md:flex-none flex items-center justify-center md:justify-start gap-4 px-4 py-3 text-[10px] font-black uppercase tracking-widest transition-colors ${activeSection === btn.id ? 'bg-white text-black' : 'text-[#5C5C5C] hover:text-white'}`}>
                             <btn.icon size={14} /> <span className="hidden md:inline">{btn.label}</span>
                         </button>
                     ))}
                 </nav>
             </aside>
 
-            <main className="flex-1 min-h-screen pt-0">
+            <main className="flex-1 min-h-screen pt-0 bg-[#151515]">
                 <header className="p-8 md:p-12 border-b border-[#5C5C5C]">
                     <div className="flex justify-between items-end">
                         <div>
                             <div className="flex gap-[0.5vw] text-[10px] font-black uppercase tracking-[0.4em] mb-4 text-[#5C5C5C]">
-                                <span>0{activeSection === 'leads' ? '0' : activeSection === 'brands' ? '1' : activeSection === 'team' ? '2' : activeSection === 'gallery' ? '3' : '4'}</span><span>/</span><span>Portal System</span>
+                                <span>0{['leads','brands','team','gallery','projects','socials'].indexOf(activeSection)}</span><span>/</span><span>Portal System</span>
                             </div>
                             <h1 className="text-4xl md:text-7xl font-display uppercase tracking-tighter">
                                 {activeSection.toUpperCase()} Management
@@ -227,7 +221,7 @@ const AdminPanel = ({ onLock }) => {
                         <div className="flex items-center gap-3">
                             {onLock && (
                                 <button onClick={onLock} className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-[#5C5C5C] text-white text-[10px] font-black uppercase tracking-widest hover:border-white hover:bg-white hover:text-black transition-all">
-                                    <LogOut size={14} /> Lock
+                                    <LogOut size={14} /> Lock Dashboard
                                 </button>
                             )}
                             {editingId && (
@@ -242,204 +236,172 @@ const AdminPanel = ({ onLock }) => {
                 <div className="grid grid-cols-1 lg:grid-cols-12">
                     <div className="lg:col-span-4 p-8 border-b lg:border-r border-[#5C5C5C] bg-[#111]">
                         <h2 className="text-[10px] font-black uppercase tracking-widest text-[#5C5C5C] mb-8">
-                            {activeSection === 'leads' ? 'Lead Hub' : editingId ? 'Edit Protocol' : 'Entry Protocol'}
+                            {activeSection === 'leads' ? 'Lead Hub' : editingId ? 'Update Entry' : 'Manual Entry'}
                         </h2>
 
                         {activeSection === 'leads' && (
                             <div className="space-y-6">
-                                <div className="p-4 bg-white/5 border border-[#5C5C5C] text-[10px] font-bold uppercase tracking-widest leading-relaxed">
-                                    All form submissions are automatically synced with the secure server database.
-                                </div>
-                                <button onClick={fetchSubmissions} className="w-full py-4 bg-white text-black font-black uppercase text-[10px] tracking-widest hover:bg-[#DDD] transition-colors">
-                                    Refresh Submissions
-                                </button>
-                                <div className="mt-8 pt-8 border-t border-white/10">
-                                    <div className="text-[9px] font-black uppercase tracking-widest text-[#5C5C5C] mb-4">Storage Info</div>
-                                    <div className="flex justify-between text-[11px] font-medium tracking-wide">
-                                        <span className="text-[#5C5C5C]">Database:</span>
-                                        <span>File System (CSV)</span>
-                                    </div>
-                                    <div className="flex justify-between text-[11px] font-medium tracking-wide mt-2">
-                                        <span className="text-[#5C5C5C]">Active Leads:</span>
-                                        <span>{submissions.length}</span>
-                                    </div>
-                                </div>
+                                <div className="p-4 bg-white/5 border border-[#5C5C5C] text-[10px] font-bold uppercase tracking-widest leading-relaxed">System synchronizing with secure cluster...</div>
+                                <button onClick={fetchSubmissions} className="w-full py-4 border border-[#5C5C5C] text-white font-black uppercase text-[10px] tracking-widest hover:bg-white hover:text-black transition-colors">Force Refresh</button>
                             </div>
                         )}
                         {activeSection === 'brands' && (
                             <form onSubmit={handleSaveLogo} className="space-y-6">
-                                <label className="block text-[10px] font-bold uppercase tracking-widest text-[#5C5C5C] mb-2">Logo Attachment</label>
-                                <label className="w-full min-h-[13rem] border-2 border-dashed border-[#5C5C5C] flex items-center justify-center cursor-pointer hover:border-white transition-colors relative overflow-hidden group bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.05),_transparent_58%)]">
-                                    {newLogo && <img src={newLogo} className="absolute inset-0 w-full h-full object-contain p-8" />}
-                                    <span className={`text-[10px] font-black uppercase tracking-widest z-10 px-3 py-1.5 border border-[#5C5C5C] bg-black/65 ${newLogo ? 'self-end mb-4' : ''}`}>{newLogo ? 'Image Ready' : 'Upload Logo'}</span>
+                                <label className="w-full py-16 border border-dashed border-[#5C5C5C] flex flex-col items-center justify-center cursor-pointer relative group">
+                                    {newLogo && <img src={newLogo} className="absolute inset-0 w-full h-full object-contain p-4 opacity-40" />}
+                                    <Plus className="mb-2 opacity-50" />
+                                    <span className="text-[10px] font-black uppercase tracking-widest">{newLogo ? 'Logo Processed' : 'Upload Vector Logo'}</span>
                                     <input type="file" className="hidden" onChange={(e) => handleFileUpload(e, 'brand')} />
                                 </label>
-                                <button type="submit" disabled={!newLogo} className="w-full py-4 bg-white text-black font-black uppercase text-[10px] tracking-widest disabled:opacity-20 transition-opacity">
-                                    {editingId ? 'Update Logo' : 'Deploy Logo'}
-                                </button>
+                                <button type="submit" className="w-full py-4 bg-white text-black font-black uppercase text-[10px] tracking-widest">{editingId ? 'Update Brand' : 'Deploy Brand'}</button>
                             </form>
                         )}
                         {activeSection === 'team' && (
-                            <form onSubmit={handleSaveMember} className="space-y-4">
-                                <input type="text" placeholder="Member ID (e.g. RF01)" className="w-full bg-black border border-[#5C5C5C] p-3 text-xs focus:ring-1 focus:ring-white outline-none" value={newMember.id} onChange={e => setNewMember({ ...newMember, id: e.target.value })} />
-                                <input type="text" placeholder="Name" className="w-full bg-black border border-[#5C5C5C] p-3 text-xs focus:ring-1 focus:ring-white outline-none" value={newMember.name} onChange={e => setNewMember({ ...newMember, name: e.target.value })} />
-                                <input type="text" placeholder="Title" className="w-full bg-black border border-[#5C5C5C] p-3 text-xs focus:ring-1 focus:ring-white outline-none" value={newMember.title} onChange={e => setNewMember({ ...newMember, title: e.target.value })} />
-                                <input type="text" placeholder="Tags (UI, UX, Fullstack)" className="w-full bg-black border border-[#5C5C5C] p-3 text-xs focus:ring-1 focus:ring-white outline-none" value={newMember.tags} onChange={e => setNewMember({ ...newMember, tags: e.target.value })} />
-                                <label className="w-full py-6 border border-dashed border-[#5C5C5C] flex items-center justify-center text-[10px] font-black cursor-pointer relative group">
-                                    {newMember.photo && <img src={newMember.photo} className="absolute inset-0 w-full h-full object-cover opacity-20" />}
-                                    <span className="z-10">{newMember.photo ? 'Photo Ready ✓' : 'Add Photo'}</span>
+                            <form onSubmit={handleSaveMember} className="space-y-2">
+                                <input type="text" placeholder="ID (RF00)" className="w-full bg-black border border-[#5C5C5C] p-3 text-xs outline-none" value={newMember.id} onChange={e => setNewMember({ ...newMember, id: e.target.value })} />
+                                <input type="text" placeholder="Name" className="w-full bg-black border border-[#5C5C5C] p-3 text-xs outline-none" value={newMember.name} onChange={e => setNewMember({ ...newMember, name: e.target.value })} />
+                                <input type="text" placeholder="Title" className="w-full bg-black border border-[#5C5C5C] p-3 text-xs outline-none" value={newMember.title} onChange={e => setNewMember({ ...newMember, title: e.target.value })} />
+                                <input type="text" placeholder="Skills (comma separated)" className="w-full bg-black border border-[#5C5C5C] p-3 text-xs outline-none" value={newMember.tags} onChange={e => setNewMember({ ...newMember, tags: e.target.value })} />
+                                <label className="w-full py-8 border border-dashed border-[#5C5C5C] flex flex-col items-center justify-center cursor-pointer relative group mt-4">
+                                    {newMember.photo && <img src={newMember.photo} className="absolute inset-0 w-full h-full object-cover opacity-40" />}
+                                    <span className="text-[10px] font-black">Member Photo</span>
                                     <input type="file" className="hidden" onChange={e => handleFileUpload(e, 'member')} />
                                 </label>
-                                <button type="submit" disabled={!newMember.name} className="w-full py-4 bg-white text-black font-black uppercase text-[10px] tracking-widest">
-                                    {editingId ? 'Update Member' : 'Deploy Member'}
-                                </button>
+                                <button type="submit" className="w-full py-4 bg-white text-black font-black uppercase text-[10px] tracking-widest mt-4">Deploy Member</button>
                             </form>
                         )}
                         {activeSection === 'gallery' && (
                             <form onSubmit={handleSaveGallery} className="space-y-6">
-                                <label className="w-full py-12 border-2 border-dashed border-[#5C5C5C] flex items-center justify-center cursor-pointer hover:border-white transition-colors relative overflow-hidden group">
-                                    {newGalleryImg && <img src={newGalleryImg} className="absolute inset-0 w-full h-full object-cover opacity-20" />}
-                                    <span className="text-[10px] font-black uppercase tracking-widest z-10">{newGalleryImg ? 'Image Ready ✓' : 'Upload Image'}</span>
+                                <label className="w-full py-16 border border-dashed border-[#5C5C5C] flex flex-col items-center justify-center cursor-pointer relative group">
+                                    {newGalleryImg && <img src={newGalleryImg} className="absolute inset-0 w-full h-full object-cover opacity-40" />}
+                                    <span className="text-[10px] font-black uppercase tracking-widest">Add To Gallery</span>
                                     <input type="file" className="hidden" onChange={(e) => handleFileUpload(e, 'gallery')} />
                                 </label>
-                                <button type="submit" disabled={!newGalleryImg} className="w-full py-4 bg-white text-black font-black uppercase text-[10px] tracking-widest">
-                                    {editingId ? 'Update Shot' : 'Add to Gallery'}
-                                </button>
+                                <button type="submit" className="w-full py-4 bg-white text-black font-black uppercase text-[10px] tracking-widest">Update Feed</button>
                             </form>
                         )}
                         {activeSection === 'projects' && (
                             <form onSubmit={handleSaveProject} className="space-y-4">
-                                <input type="text" placeholder="Project Name" className="w-full bg-black border border-[#5C5C5C] p-3 text-xs focus:ring-1 focus:ring-white outline-none" value={newProject.title} onChange={e => setNewProject({ ...newProject, title: e.target.value })} />
-                                <input type="text" placeholder="Hashtags (Food & Beverage, Hospitality, Restaurant)" className="w-full bg-black border border-[#5C5C5C] p-3 text-xs focus:ring-1 focus:ring-white outline-none" value={newProject.tags} onChange={e => setNewProject({ ...newProject, tags: e.target.value })} />
-                                <textarea placeholder="Short Description (shown on projects page)" className="w-full bg-black border border-[#5C5C5C] p-3 text-xs focus:ring-1 focus:ring-white outline-none" rows="2" value={newProject.desc} onChange={e => setNewProject({ ...newProject, desc: e.target.value })} />
-                                <textarea placeholder="Client's Requirements Message" className="w-full bg-black border border-[#5C5C5C] p-3 text-xs focus:ring-1 focus:ring-white outline-none" rows="3" value={newProject.clientMsg} onChange={e => setNewProject({ ...newProject, clientMsg: e.target.value })} />
-                                <textarea placeholder="Webingix Response Message" className="w-full bg-black border border-[#5C5C5C] p-3 text-xs focus:ring-1 focus:ring-white outline-none" rows="3" value={newProject.ourMsg} onChange={e => setNewProject({ ...newProject, ourMsg: e.target.value })} />
-                                <input type="text" placeholder="Time Frame (e.g. 12 h)" className="w-full bg-black border border-[#5C5C5C] p-3 text-xs focus:ring-1 focus:ring-white outline-none" value={newProject.time} onChange={e => setNewProject({ ...newProject, time: e.target.value })} />
-                                <label className="w-full py-8 border border-dashed border-[#5C5C5C] flex flex-col items-center justify-center text-[10px] font-black cursor-pointer relative group">
-                                    {newProject.image && <img src={newProject.image} className="absolute inset-0 w-full h-full object-cover opacity-20" />}
-                                    <span className="z-10">{newProject.image ? 'Project Photo Ready ✓' : 'Add Project Cover Image'}</span>
+                                <input type="text" placeholder="Project Name" className="w-full bg-black border border-[#5C5C5C] p-3 text-xs outline-none" value={newProject.title} onChange={e => setNewProject({ ...newProject, title: e.target.value })} />
+                                <input type="text" placeholder="Tags (tag1, tag2)" className="w-full bg-black border border-[#5C5C5C] p-3 text-xs outline-none" value={newProject.tags} onChange={e => setNewProject({ ...newProject, tags: e.target.value })} />
+                                <textarea placeholder="Client's Requirements" className="w-full bg-black border border-[#5C5C5C] p-3 text-xs outline-none h-24" value={newProject.clientMsg} onChange={e => setNewProject({ ...newProject, clientMsg: e.target.value })} />
+                                <textarea placeholder="Our Response" className="w-full bg-black border border-[#5C5C5C] p-3 text-xs outline-none h-24" value={newProject.ourMsg} onChange={e => setNewProject({ ...newProject, ourMsg: e.target.value })} />
+                                <input type="text" placeholder="Time Frame (e.g., 2 weeks)" className="w-full bg-black border border-[#5C5C5C] p-3 text-xs outline-none" value={newProject.time} onChange={e => setNewProject({ ...newProject, time: e.target.value })} />
+                                <label className="w-full py-8 border border-dashed border-[#5C5C5C] flex flex-col items-center justify-center cursor-pointer relative group">
+                                    {newProject.image && <img src={newProject.image} className="absolute inset-0 w-full h-full object-cover opacity-40" />}
+                                    <span className="text-[10px] font-black uppercase">Project Image</span>
                                     <input type="file" className="hidden" onChange={e => handleFileUpload(e, 'project')} />
                                 </label>
-                                <button type="submit" disabled={!newProject.title} className="w-full py-4 bg-white text-black font-black uppercase text-[10px] tracking-widest">
-                                    {editingId ? 'Update Project' : 'Launch Project'}
-                                </button>
+                                <button type="submit" className="w-full py-4 bg-white text-black font-black uppercase text-[10px] tracking-widest">Update Projects</button>
                             </form>
                         )}
-                        <AnimatePresence>
-                            {showSuccess && <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="mt-4 p-3 bg-green-500/10 border border-green-500/50 text-green-500 text-[10px] font-bold uppercase tracking-widest flex items-center gap-2"><Check size={14} /> System Synchronized</motion.div>}
-                        </AnimatePresence>
+                        {activeSection === 'socials' && (
+                            <form onSubmit={handleSaveSocial} className="space-y-4">
+                                <select 
+                                    className="w-full bg-black border border-[#5C5C5C] p-3 text-xs outline-none text-white cursor-pointer"
+                                    value={newSocial.name}
+                                    onChange={e => setNewSocial({ ...newSocial, name: e.target.value })}
+                                >
+                                    <option value="">Select Platform</option>
+                                    <option value="X">X (Twitter)</option>
+                                    <option value="Call">Call / Phone</option>
+                                    <option value="Facebook">Facebook</option>
+                                    <option value="LinkedIn">LinkedIn</option>
+                                    <option value="Email">Email</option>
+                                    <option value="WhatsApp">WhatsApp</option>
+                                    <option value="Instagram">Instagram</option>
+                                </select>
+                                <input type="text" placeholder="Profile URL / Link" className="w-full bg-black border border-[#5C5C5C] p-3 text-xs outline-none" value={newSocial.url} onChange={e => setNewSocial({ ...newSocial, url: e.target.value })} />
+                                <button type="submit" className="w-full py-4 bg-white text-black font-black uppercase text-[10px] tracking-widest">{editingId ? 'Update Link' : 'Deploy Link'}</button>
+                            </form>
+                        )}
                     </div>
 
-                    <div className="lg:col-span-8 bg-black">
+                    <div className="lg:col-span-8 p-0">
                         {activeSection === 'leads' && (
-                            <div className="p-4 md:p-8 overflow-x-auto border-l border-[#5C5C5C]">
-                                {isLoadingSubmissions ? (
-                                    <div className="py-20 text-center text-[10px] font-black uppercase tracking-widest text-[#5C5C5C]">
-                                        Retrieving Secure Leads...
-                                    </div>
-                                ) : submissions.length === 0 ? (
-                                    <div className="py-20 text-center text-[10px] font-black uppercase tracking-widest text-[#5C5C5C]">
-                                        No submissions registered yet.
-                                    </div>
-                                ) : (
-                                    <table className="w-full text-left border-collapse min-w-[800px]">
-                                        <thead>
-                                            <tr className="border-b border-[#5C5C5C]">
-                                                {['Date', 'Name', 'Method', 'Contact', 'Project', 'Timeline', 'Details'].map(h => (
-                                                    <th key={h} className="p-4 text-[10px] font-black uppercase tracking-widest text-[#5C5C5C]">{h}</th>
-                                                ))}
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left border-collapse min-w-[600px]">
+                                    <thead>
+                                        <tr className="border-b border-[#5C5C5C]">
+                                            {['Date', 'Name', 'Contact', 'Type', 'Project'].map(h => <th key={h} className="p-6 text-[10px] font-black uppercase tracking-widest text-[#5C5C5C]">{h}</th>)}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {submissions.map((s, i) => (
+                                            <tr key={i} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                                                <td className="p-6 text-xs text-[#5C5C5C]">{new Date(s.timestamp).toLocaleDateString()}</td>
+                                                <td className="p-6 text-sm font-bold uppercase">{s.name}</td>
+                                                <td className="p-6 text-xs font-medium text-[#39FF14]">{s.contact}</td>
+                                                <td className="p-6 text-[10px] font-black uppercase opacity-60">{s.type}</td>
+                                                <td className="p-6 text-[10px] font-bold uppercase">{s.project}</td>
                                             </tr>
-                                        </thead>
-                                        <tbody>
-                                            {submissions.map((s, i) => (
-                                                <tr key={i} className="border-b border-[#5C5C5C]/30 hover:bg-white/5 transition-colors group">
-                                                    <td className="p-4 text-[10px] opacity-60 font-medium">{new Date(s.Timestamp).toLocaleDateString()}</td>
-                                                    <td className="p-4 text-[12px] font-bold uppercase tracking-wide group-hover:text-[#39FF14] transition-colors">{s.Name}</td>
-                                                    <td className="p-4 text-[10px]"><span className="px-2 py-0.5 bg-white/10 rounded uppercase tracking-tighter">{s.Method}</span></td>
-                                                    <td className="p-4 text-[11px] font-mono">{s['Phone/Email']}</td>
-                                                    <td className="p-4 text-[11px] font-medium">{s['Project Name']}</td>
-                                                    <td className="p-4 text-[10px] text-[#5C5C5C]">{s.Timeline}</td>
-                                                    <td className="p-4">
-                                                        <div className="max-w-[150px] truncate text-[10px] text-[#888]">{s.Details}</div>
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                )}
+                                        ))}
+                                    </tbody>
+                                </table>
                             </div>
                         )}
-                        {activeSection === 'brands' && (
-                            <div className="grid grid-cols-2 lg:grid-cols-4 border-l border-[#5C5C5C] bg-[linear-gradient(180deg,rgba(255,255,255,0.025),rgba(255,255,255,0))]">
-                                {logos.map(logo => (
-                                    <div key={logo.id} className="aspect-square border-r border-b border-[#5C5C5C] p-6 md:p-8 relative group flex items-center justify-center bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.04),_transparent_62%)]">
-                                        <img src={logo.url} alt="Logo" className="max-w-full max-h-full object-contain transition-transform duration-300 group-hover:scale-[1.03]" />
-                                        <div className="absolute left-4 right-4 bottom-4 flex gap-2 opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300">
-                                            <button onClick={() => startEditingLogo(logo)} className="flex-1 py-2 bg-white text-black text-[8px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-2 hover:bg-[#DDD] transition-colors"><Edit2 size={12} /> Edit</button>
-                                            <button onClick={() => setLogos(logos.filter(l => l.id !== logo.id))} className="flex-1 py-2 bg-red-600 text-white text-[8px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-2 hover:bg-red-700 transition-colors"><Trash2 size={12} /> Delete</button>
+                        {(activeSection === 'brands' || activeSection === 'gallery') && (
+                            <div className="p-8 grid grid-cols-2 md:grid-cols-4 gap-6">
+                                {(activeSection === 'brands' ? logos : gallery).map(item => (
+                                    <div key={item._id} className="aspect-square bg-black border border-white/10 flex items-center justify-center p-6 relative group">
+                                        <img src={item.url} className="max-w-full max-h-full object-contain" />
+                                        <div className="absolute inset-0 bg-black/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
+                                            <button onClick={() => handleDelete(activeSection === 'brands' ? 'logos' : 'gallery', item._id)} className="p-3 bg-red-500 text-white rounded-full"><Trash2 size={16} /></button>
                                         </div>
                                     </div>
                                 ))}
                             </div>
                         )}
                         {activeSection === 'team' && (
-                            <div className="p-8 space-y-4 border-l border-[#5C5C5C]">
+                            <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-6">
                                 {team.map(m => (
-                                    <div key={m.id} className="p-6 border border-[#5C5C5C] bg-[#111] flex items-center gap-6 group hover:border-white transition-colors duration-500">
-                                        <div className="w-20 h-24 bg-zinc-900 border border-[#5C5C5C] overflow-hidden">{m.photo && <img src={m.photo} className="w-full h-full object-cover" />}</div>
-                                        <div className="flex-1">
-                                            <div className="text-[8px] font-bold text-[#5C5C5C] mb-1">{m.id}</div>
-                                            <div className="text-xl font-display uppercase">{m.name}</div>
-                                            <div className="text-[10px] text-[#5C5C5C] uppercase">{m.title}</div>
+                                    <div key={m._id} className="bg-white/5 border border-white/10 p-6 flex flex-col relative group">
+                                        <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <button onClick={() => startEditingMember(m)} className="p-2 hover:text-white"><Edit2 size={14} /></button>
+                                            <button onClick={() => handleDelete('team', m._id)} className="p-2 hover:text-red-500"><Trash2 size={14} /></button>
                                         </div>
-                                        <div className="flex gap-2">
-                                            <button onClick={() => startEditingMember(m)} className="p-3 bg-white/5 border border-[#5C5C5C] hover:bg-white hover:text-black transition-all"><Edit2 size={16} /></button>
-                                            <button onClick={() => setTeam(team.filter(x => x.id !== m.id))} className="p-3 bg-red-500/10 border border-red-500/50 text-red-500 hover:bg-red-500 hover:text-white transition-all"><Trash2 size={16} /></button>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                        {activeSection === 'gallery' && (
-                            <div className="grid grid-cols-2 lg:grid-cols-3 border-l border-[#5C5C5C]">
-                                {gallery.map(img => (
-                                    <div key={img.id} className="aspect-square border-r border-b border-[#5C5C5C] relative group overflow-hidden">
-                                        <img src={img.url} className="w-full h-full object-cover" />
-                                        <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center gap-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <button onClick={() => startEditingGallery(img)} className="w-[50%] py-2 bg-white text-black text-[8px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-2"><Edit2 size={12} /> Edit</button>
-                                            <button onClick={() => setGallery(gallery.filter(g => g.id !== img.id))} className="w-[50%] py-2 bg-red-600 text-white text-[8px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-2"><Trash2 size={12} /> Delete</button>
-                                        </div>
+                                        <div className="w-16 h-16 bg-black mb-4 overflow-hidden rounded-sm">{m.photo && <img src={m.photo} className="w-full h-full object-cover" />}</div>
+                                        <h3 className="text-sm font-black uppercase tracking-widest">{m.name}</h3>
+                                        <p className="text-[10px] font-bold text-[#5C5C5C] mt-1">{m.title}</p>
                                     </div>
                                 ))}
                             </div>
                         )}
                         {activeSection === 'projects' && (
-                            <div className="p-8 space-y-6 border-l border-[#5C5C5C]">
+                            <div className="p-8 grid grid-cols-1 gap-4">
                                 {projects.map(p => (
-                                    <div key={p.id} className="p-6 border border-[#5C5C5C] bg-[#111] group relative hover:border-white transition-all duration-500 overflow-hidden">
-                                        <div className="flex justify-between mb-4 relative z-10">
-                                            <span className="text-[10px] font-bold text-[#5C5C5C]">{p.id}</span>
-                                            <div className="flex gap-2">
-                                                <button onClick={() => startEditingProject(p)} className="p-1 text-[#5C5C5C] hover:text-white transition-colors"><Edit2 size={16} /></button>
-                                                <button onClick={() => setProjects(projects.filter(x => x.id !== p.id))} className="p-1 text-[#5C5C5C] hover:text-red-500 transition-colors"><Trash2 size={16} /></button>
+                                    <div key={p._id} className="bg-white/5 border border-white/10 p-6 flex justify-between items-center group">
+                                        <div>
+                                            <h3 className="text-lg font-black uppercase tracking-tighter">{p.title}</h3>
+                                            <p className="text-[10px] font-bold text-[#5C5C5C] mt-1 uppercase tracking-widest">{p.id} / STATUS: DEPLOYED</p>
+                                        </div>
+                                        <div className="flex gap-4">
+                                            <button onClick={() => startEditingProject(p)} className="p-4 bg-white text-black hover:bg-zinc-200"><Edit2 size={16} /></button>
+                                            <button onClick={() => handleDelete('projects', p._id)} className="p-4 bg-red-500/10 text-red-500 border border-red-500/50 hover:bg-red-500 hover:text-white"><Trash2 size={16} /></button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                        {activeSection === 'socials' && (
+                            <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {socials.map(s => (
+                                    <div key={s._id} className="bg-white/5 border border-white/10 p-6 flex justify-between items-center group">
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-10 h-10 bg-black flex items-center justify-center border border-white/10 rounded-sm">
+                                                {s.name.toLowerCase().includes('phone') || s.name.toLowerCase().includes('call') ? <Phone size={16} /> : 
+                                                 s.name.toLowerCase().includes('email') || s.name.toLowerCase().includes('mail') ? <Mail size={16} /> : 
+                                                 <Globe size={16} />}
+                                            </div>
+                                            <div>
+                                                <h3 className="text-xs font-black uppercase tracking-widest">{s.name}</h3>
+                                                <p className="text-[10px] text-[#5C5C5C] mt-1 font-mono max-w-[150px] truncate">{s.url}</p>
                                             </div>
                                         </div>
-                                        {p.image && <div className="absolute top-0 right-0 w-32 h-32 opacity-10 blur-sm -mr-8 -mt-8"><img src={p.image} className="w-full h-full object-cover" /></div>}
-                                        <h3 className="text-xl font-display uppercase mb-2 relative z-10">{p.title}</h3>
-                                        <div className="flex flex-wrap gap-2 mb-2 relative z-10">
-                                            {Array.isArray(p.tags) && p.tags.map((tag, idx) => (
-                                                <span key={idx} className="text-[9px] uppercase tracking-wider border border-[#5C5C5C] px-2 py-1 text-white">
-                                                    #{tag}
-                                                </span>
-                                            ))}
+                                        <div className="flex gap-2">
+                                            <button onClick={() => startEditingSocial(s)} className="p-2 opacity-30 group-hover:opacity-100 hover:text-white"><Edit2 size={14} /></button>
+                                            <button onClick={() => handleDelete('socials', s._id)} className="p-2 opacity-30 group-hover:opacity-100 hover:text-red-500"><Trash2 size={14} /></button>
                                         </div>
-                                        {(p.desc || p.clientMsg) && (
-                                            <div className="p-3 bg-black/40 border border-[#5C5C5C]/30 text-[10px] text-white uppercase leading-relaxed font-bold tracking-widest mb-2 truncate relative z-10">
-                                                {(p.desc || p.clientMsg)}
-                                            </div>
-                                        )}
-                                        <div className="p-3 bg-black/50 border border-[#5C5C5C]/30 text-[10px] text-[#5C5C5C] uppercase leading-relaxed font-bold tracking-widest mb-2 truncate relative z-10">Client: {p.clientMsg}</div>
-                                        <div className="p-3 bg-white/5 border border-[#5C5C5C]/30 text-[10px] text-white uppercase leading-relaxed font-bold tracking-widest truncate relative z-10">Our Reply: {p.ourMsg}</div>
                                     </div>
                                 ))}
                             </div>

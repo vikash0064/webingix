@@ -105,8 +105,8 @@ const Technologies = () => {
                                 `}
                             >
                                 {/* Background & Hover Overlay */}
-                                <div className="absolute inset-0 z-0 bg-[#151515]"></div>
-                                <div className="absolute inset-0 z-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                                <div className="absolute inset-0 z-0 bg-[#0f0f0f]"></div>
+                                <div className="absolute inset-0 z-0 bg-white/6 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
 
                                 {/* Corner Decorators (visible on larger screens to match desktop aesthetic) */}
                                 <div className="hidden md:block">
@@ -132,10 +132,6 @@ const Technologies = () => {
                 </div>
             </div>
 
-            {/* Background Text Decorator */}
-            <div className="absolute bottom-[-5%] left-[-5%] text-[20vw] font-black text-white/[0.02] select-none pointer-events-none uppercase tracking-tighter leading-none hidden lg:block">
-                TECHNIQUE
-            </div>
         </section>
     );
 };

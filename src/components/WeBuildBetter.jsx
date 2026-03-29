@@ -8,47 +8,43 @@ gsap.registerPlugin(ScrollTrigger);
 
 const AGENCY_NAME = 'Webingix';
 
-const projects = [
+const staticProjects = [
     {
-        index: '01',
-        clientInitial: 'R',
-        clientName: 'RetailCo',
+        id: '01',
+        title: 'RetailCo',
         time: '2 h',
         clientMsg: 'We need a futuristic shopping experience with smooth animations and fast checkout.',
-        agencyMsg: "Let's build it with React and a fast premium frontend experience.",
-        cover: '/div.jpg'
+        ourMsg: "Let's build it with React and a fast premium frontend experience.",
+        image: '/div.jpg'
     },
     {
-        index: '02',
-        clientInitial: 'T',
-        clientName: 'TravelMind',
+        id: '02',
+        title: 'TravelMind',
         time: '5 h',
         clientMsg: 'Build an AI-powered app that generates custom travel itineraries for users.',
-        agencyMsg: 'We can combine AI planning, maps, and a polished user flow.',
-        cover: '/laptop.webp'
+        ourMsg: 'We can combine AI planning, maps, and a polished user flow.',
+        image: '/laptop.webp'
     },
     {
-        index: '03',
-        clientInitial: 'E',
-        clientName: 'EventPro',
+        id: '03',
+        title: 'EventPro',
         time: '12 h',
         clientMsg: 'We handle 500 plus events a year. We need a system that can keep up with us.',
-        agencyMsg: 'Real-time dashboards, ticketing, and analytics will make this scale.',
-        cover: '/camera.webp'
+        ourMsg: 'Real-time dashboards, ticketing, and analytics will make this scale.',
+        image: '/camera.webp'
     },
     {
-        index: '04',
-        clientInitial: 'S',
-        clientName: 'SmileCare',
+        id: '04',
+        title: 'SmileCare',
         time: '24 h',
         clientMsg: 'We want a premium website that makes patients excited about dentistry.',
-        agencyMsg: 'We will keep it calm, clean, and confidence-building for patients.',
-        cover: '/yo.png'
+        ourMsg: 'We will keep it calm, clean, and confidence-building for patients.',
+        image: '/yo.png'
     }
 ];
 
 const renderCorner = (type) => {
-    const baseClasses = 'aspect-square border border-[#5C5C5C] absolute w-[3vw] md:w-[0.55vw] bg-[#111] z-[10]';
+    const baseClasses = 'aspect-square border border-[#5C5C5C] absolute w-[3vw] md:w-[0.55vw] bg-[#0f0f0f] z-[10]';
     switch (type) {
         case 'tl': return <div key="tl" className={`${baseClasses} top-0 left-0 -translate-x-1/2 -translate-y-1/2`} />;
         case 'tr': return <div key="tr" className={`${baseClasses} top-0 right-0 translate-x-1/2 -translate-y-1/2`} />;
@@ -61,6 +57,33 @@ const renderCorner = (type) => {
 const WeBuildBetter = () => {
     const containerRef = useRef();
     const headingRef = useRef(null);
+    const [projects, setProjects] = React.useState(staticProjects);
+
+    const fetchProjects = async () => {
+        try {
+            const response = await fetch('/api/projects');
+            if (response.ok) {
+                const data = await response.json();
+                if (data && data.length > 0) {
+                    setProjects(data);
+                    // Persist for offline/fast load
+                    localStorage.setItem('projects_data', JSON.stringify(data));
+                }
+            }
+        } catch (err) {
+            console.error('Failed to fetch projects:', err);
+            // Fallback to localStorage if available
+            const saved = localStorage.getItem('projects_data');
+            if (saved) setProjects(JSON.parse(saved));
+        }
+    };
+
+    React.useEffect(() => {
+        fetchProjects();
+        // Listen for updates from Admin Panel
+        window.addEventListener('webingix:projects_data_updated', fetchProjects);
+        return () => window.removeEventListener('webingix:projects_data_updated', fetchProjects);
+    }, []);
 
     useLayoutEffect(() => {
         const ctx = gsap.context(() => {
@@ -115,20 +138,27 @@ const WeBuildBetter = () => {
                     }
                 });
             }
+            
+            // Ensure ScrollTrigger refreshes when dynamic content is ready
+            ScrollTrigger.refresh();
         });
         return () => ctx.revert();
-    }, []);
+    }, [projects]);
 
     const splitText = (text) => {
-        return text.split('').map((char, index) => (
-            <span key={index} className="inline-block letter-anim">
-                {char === ' ' ? '\u00A0' : char}
-            </span>
+        return text.split(' ').map((word, wIdx) => (
+            <div key={wIdx} className="word inline-block mr-[0.12em] overflow-hidden align-top">
+                {word.split('').map((char, cIdx) => (
+                    <span key={cIdx} className="char inline-block letter-anim">
+                        {char}
+                    </span>
+                ))}
+            </div>
         ));
     };
 
     return (
-        <section ref={containerRef} className="bg-transparent pt-[2vw] pb-32 relative z-20 overflow-hidden">
+        <section ref={containerRef} className="bg-transparent pt-[2vw] pb-12 relative z-20 overflow-hidden">
             <div className="md:hidden px-4 pt-10">
                 <div className="w-full h-px bg-white/20 mb-6" />
                 <div className="text-[8px] font-black uppercase tracking-[0.14em] text-white text-center mb-6">
@@ -148,11 +178,11 @@ const WeBuildBetter = () => {
 
                 <div className="space-y-6">
                     {projects.map((project) => (
-                        <article key={project.index} className="border border-[#6a6a6a] px-4 pt-4 pb-5 bg-[#151515]">
+                        <article key={project.id} className="border border-[#6a6a6a] px-4 pt-4 pb-5 bg-[#0f0f0f]">
                             <div className="flex items-start justify-between gap-4">
                                 <div>
                                     <h3 className="font-anton text-[10vw] leading-[0.9] text-white tracking-tight">
-                                        {project.clientName}
+                                        {project.title}
                                     </h3>
                                 </div>
                                 <span className="text-white/85 text-[2rem] leading-none mt-1">↗</span>
@@ -160,7 +190,7 @@ const WeBuildBetter = () => {
 
                             <div className="mt-4 border border-white/45 p-[6px] bg-[#171717]">
                                 <div className="aspect-[1.06] overflow-hidden bg-black">
-                                    <img src={project.cover} alt={project.clientName} className="w-full h-full object-cover" />
+                                    <img src={project.image} alt={project.title} className="w-full h-full object-cover" />
                                 </div>
                             </div>
 
@@ -168,13 +198,13 @@ const WeBuildBetter = () => {
                                 <div className="flex gap-3">
                                     <div className="flex flex-col items-center flex-shrink-0">
                                         <div className="w-10 h-10 rounded-full border border-white/20 bg-[#1c2d74] flex items-center justify-center">
-                                            <span className="text-white font-medium text-[1.65rem] leading-none lowercase">{project.clientInitial.toLowerCase()}</span>
+                                            <span className="text-white font-medium text-[1.65rem] leading-none lowercase">{(project.title || 'P')[0].toLowerCase()}</span>
                                         </div>
                                         <div className="w-px h-11 bg-white/25 mt-1"></div>
                                     </div>
                                     <div className="pt-0.5">
                                         <div className="text-[0.98rem] text-white font-semibold leading-none">
-                                            {project.clientName}
+                                            {project.title}
                                             <span className="text-white/55 font-normal"> • {project.time}</span>
                                         </div>
                                         <p className="text-[0.92rem] leading-[1.42] text-white mt-2">
@@ -193,7 +223,7 @@ const WeBuildBetter = () => {
                                             <span className="text-white/55 font-normal"> • {project.time}</span>
                                         </div>
                                         <p className="text-[0.92rem] leading-[1.42] text-white mt-2">
-                                            {project.agencyMsg}
+                                            {project.ourMsg}
                                         </p>
                                     </div>
                                 </div>
@@ -242,32 +272,32 @@ const WeBuildBetter = () => {
                 <div className="w-full max-w-[1400px] mx-auto relative h-full">
                     {projects.map((project, idx) => (
                         <div
-                            key={project.index}
+                            key={project.id || idx}
                             style={{
                                 top: `calc(${idx * 3.8}vw + 100px)`,
                                 zIndex: idx + 1,
                             }}
-                            className="w-full bg-[#151515] border-t border-[#FFFFFF] overflow-hidden min-h-[75vh] pb-[5vw] project-card absolute left-0 will-change-transform"
+                            className="w-full bg-[#0f0f0f] border-t border-[#FFFFFF] overflow-hidden min-h-[75vh] pb-[5vw] project-card absolute left-0 will-change-transform"
                         >
                             {['tl', 'tr', 'br', 'bl'].map((corner) => renderCorner(corner))}
                             <div className="section-inner flex justify-between mx-auto md:px-[1vw] pt-[1vw] gap-[10vw]">
                                 <div className="card-inner flex gap-[16vw] flex-1 pl-0">
-                                    <p className="font-sans font-light text-[min(1.5vw,24px)] text-white">{project.index}</p>
+                                    <p className="font-sans font-light text-[min(1.5vw,24px)] text-white">{project.id}</p>
                                     <div className="flex flex-col gap-[2vw]">
                                         <p className="font-anton text-[min(3.5vw,60px)] text-white uppercase origin-top-left">
-                                            {project.clientName}
+                                            {project.title}
                                         </p>
                                         <div className="flex flex-col gap-[.75vw]">
                                             <div className="flex gap-[1vw]">
                                                 <div className="flex flex-col items-center">
                                                     <div className="rounded-full w-[3vw] aspect-square bg-[#333] overflow-hidden flex items-center justify-center">
-                                                        <span className="text-white font-bold">{project.clientInitial}</span>
+                                                        <span className="text-white font-bold">{(project.title || 'P')[0]}</span>
                                                     </div>
                                                     <div className="flex-1 w-px bg-[#454545] mx-auto mt-[.5vw]"></div>
                                                 </div>
                                                 <div className="mt-[.5vw] pb-[2vw]">
                                                     <div className="flex gap-[.75vw] items-center">
-                                                        <p className="font-sans text-[min(1.1vw,18px)] font-bold text-white uppercase">{project.clientName}</p>
+                                                        <p className="font-sans text-[min(1.1vw,18px)] font-bold text-white uppercase">{project.title}</p>
                                                         <span className="w-[.25vw] aspect-square rounded-full bg-[#FFFFFF]"></span>
                                                         <p className="font-sans text-[min(1.1vw,18px)] font-light text-white/80">{project.time}</p>
                                                     </div>
@@ -290,7 +320,7 @@ const WeBuildBetter = () => {
                                                         <p className="font-sans text-[min(1.1vw,18px)] font-light text-white/80">{project.time}</p>
                                                     </div>
                                                     <p className="font-sans text-[min(1.1vw,18px)] text-white mt-[1vw] leading-[1.5] md:max-w-[40vw]">
-                                                        {project.agencyMsg}
+                                                        {project.ourMsg}
                                                     </p>
                                                 </div>
                                             </div>
@@ -299,7 +329,7 @@ const WeBuildBetter = () => {
                                 </div>
                                 <div className="w-[27.5%] flex-shrink-0 flex pb-0 relative group">
                                     <div className="w-full h-full border-[8px] border-white aspect-[4/3] overflow-hidden">
-                                        <img src={project.cover} alt={project.clientName} className="w-full h-full object-cover" />
+                                        <img src={project.image} alt={project.title} className="w-full h-full object-cover" />
                                     </div>
                                 </div>
                             </div>

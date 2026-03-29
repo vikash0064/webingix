@@ -11,12 +11,8 @@ const Home = () => {
             <Hero />
             <Technologies />
             <WeBuildBetter />
-            <div className="hidden md:block">
-                <Services />
-            </div>
-            <div className="hidden md:block">
-                <Process />
-            </div>
+            <Services />
+            <Process />
             <Contact />
         </div>
     );

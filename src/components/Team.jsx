@@ -16,25 +16,67 @@ const defaultMembers = [
 ];
 
 const Team = () => {
-    const [teamMembers] = useState(() => {
-        const saved = localStorage.getItem('team_members');
-        return saved ? JSON.parse(saved) : defaultMembers;
-    });
+    const [teamMembers, setTeamMembers] = useState([]);
+    const [clientLogos, setClientLogos] = useState([]);
+    const [galleryImages, setGalleryImages] = useState([]);
+    const [projects, setProjects] = useState([]);
 
-    const [clientLogos] = useState(() => {
-        const saved = localStorage.getItem('client_logos');
-        return saved ? JSON.parse(saved) : [];
-    });
+    const normalizeMember = (member, idx = 0) => {
+        const fallback = defaultMembers[idx % defaultMembers.length] || {};
+        const name = (member.name || fallback.name || `Member ${idx + 1}`).toString();
+        const id = (member.id || fallback.id || `RF${String(idx + 1).padStart(2, '0')}`).toString();
+        const title = (member.title || member.role || fallback.title || 'Team Member').toString();
 
-    const [galleryImages] = useState(() => {
-        const saved = localStorage.getItem('gallery_images');
-        return saved ? JSON.parse(saved) : [];
-    });
+        let tags = member.tags;
+        if (typeof tags === 'string') {
+            tags = tags
+                .split(/[,|]/)
+                .map(t => t.trim())
+                .filter(Boolean);
+        }
+        if (!Array.isArray(tags) || tags.length === 0) {
+            tags = fallback.tags || [];
+        }
 
-    const [projects] = useState(() => {
-        const saved = localStorage.getItem('projects_data');
-        return saved ? JSON.parse(saved) : [];
-    });
+        return {
+            _id: member._id || id,
+            id,
+            name,
+            title,
+            tags,
+            photo: member.photo || member.image || ''
+        };
+    };
+
+    const fetchData = async () => {
+        try {
+            const [lRes, tRes, gRes, pRes] = await Promise.all([
+                fetch('/api/logos'),
+                fetch('/api/team'),
+                fetch('/api/gallery'),
+                fetch('/api/projects')
+            ]);
+            if (lRes.ok) setClientLogos(await lRes.ok ? await lRes.json() : []);
+            if (tRes.ok) {
+                const rawTeam = await tRes.json();
+                const normalized = Array.isArray(rawTeam)
+                    ? rawTeam.map((m, i) => normalizeMember(m, i))
+                    : [];
+                setTeamMembers(normalized.length ? normalized : []);
+            }
+            if (gRes.ok) setGalleryImages(await gRes.ok ? await gRes.json() : []);
+            if (pRes.ok) setProjects(await pRes.ok ? await pRes.json() : []);
+        } catch (err) {
+            console.error('Failed to fetch data:', err);
+        }
+    };
+
+    useEffect(() => {
+        fetchData();
+        const handleUpdate = () => fetchData();
+        window.addEventListener('webingix:projects_data_updated', handleUpdate);
+        return () => window.removeEventListener('webingix:projects_data_updated', handleUpdate);
+    }, []);
 
     const imageRef = useRef();
     const titleRef = useRef();
@@ -44,45 +86,116 @@ const Team = () => {
     const popcornRef = useRef();
 
     const splitText = (text) => {
-        return text.split('').map((char, index) => (
-            <span key={index} className="inline-block letter-anim">
-                {char === ' ' ? '\u00A0' : char}
-            </span>
+        return text.split(' ').map((word, wIdx) => (
+            <div key={wIdx} className="word inline-block mr-[0.12em] overflow-hidden align-top whitespace-nowrap">
+                {word.split('').map((char, cIdx) => (
+                    <span key={cIdx} className="char inline-block letter-anim">
+                        {char}
+                    </span>
+                ))}
+            </div>
         ));
     };
 
-    useEffect(() => {
-        window.scrollTo(0, 0);
-
-        const revealElements = gsap.utils.toArray('.reveal-text');
-        revealElements.forEach((el) => {
-            gsap.fromTo(el.querySelectorAll('.letter-anim'),
-                { y: 80, opacity: 0 },
-                {
-                    y: 0,
-                    opacity: 1,
-                    duration: 0.4,
-                    stagger: 0.015,
-                    ease: "power3.out",
-                    scrollTrigger: {
-                        trigger: el,
-                        start: "top 85%",
-                        toggleActions: "play reverse play reverse",
+    React.useLayoutEffect(() => {
+        const ctx = gsap.context(() => {
+            const revealElements = gsap.utils.toArray('.reveal-text');
+            revealElements.forEach((el) => {
+                gsap.fromTo(el.querySelectorAll('.letter-anim'),
+                    { y: 80, opacity: 0 },
+                    {
+                        y: 0,
+                        opacity: 1,
+                        duration: 0.4,
+                        stagger: 0.012,
+                        ease: "power3.out",
+                        scrollTrigger: {
+                            trigger: el,
+                            start: "top 85%",
+                            toggleActions: "play none none none",
+                        }
                     }
-                }
-            );
-        });
+                );
+            });
 
-        if (titleRef.current) {
-            gsap.fromTo(titleRef.current.querySelectorAll('.letter-anim'),
-                { y: 80, opacity: 0 },
-                { y: 0, opacity: 1, duration: 0.4, stagger: 0.015, ease: "power3.out", delay: 0.2 }
-            );
-            gsap.fromTo(titleRef.current.querySelector('.from-line'),
-                { opacity: 0, x: 20 },
-                { opacity: 1, x: 0, duration: 0.6, ease: "power2.out", delay: 0.8 }
-            );
-        }
+            if (titleRef.current) {
+                gsap.fromTo(titleRef.current.querySelectorAll('.letter-anim'),
+                    { y: 80, opacity: 0 },
+                    { y: 0, opacity: 1, duration: 0.4, stagger: 0.012, ease: "power3.out", delay: 0.2 }
+                );
+            }
+
+            if (rocketRef.current) {
+                const isMobile = window.innerWidth < 768;
+                gsap.fromTo(rocketRef.current,
+                    { width: 0, scale: 0, opacity: 0 },
+                    {
+                        width: isMobile ? "19vw" : "11vw",
+                        scale: 1,
+                        opacity: 1,
+                        marginLeft: isMobile ? "-1.5vw" : "-0.7vw",
+                        marginRight: isMobile ? "-0.8vw" : "-0.3vw",
+                        duration: 0.8,
+                        ease: "power3.out",
+                        scrollTrigger: { trigger: rocketRef.current, start: "top 85%", toggleActions: "play none none none" }
+                    }
+                );
+            }
+
+            if (globeRef.current) {
+                const isMobile = window.innerWidth < 768;
+                gsap.fromTo(globeRef.current,
+                    { width: 0, scale: 0, opacity: 0 },
+                    {
+                        width: isMobile ? "15vw" : "9vw",
+                        scale: 1,
+                        opacity: 1,
+                        marginLeft: isMobile ? "-2vw" : "-2.5vw",
+                        marginRight: isMobile ? "-2vw" : "-2.5vw",
+                        duration: 1.0,
+                        ease: "power3.out",
+                        scrollTrigger: { trigger: globeRef.current.closest('h2'), start: "top 85%", toggleActions: "play none none none" },
+                        delay: 1.1
+                    }
+                );
+            }
+
+            if (cameraRef.current) {
+                const isMobile = window.innerWidth < 768;
+                gsap.fromTo(cameraRef.current,
+                    { width: 0, scale: 0, opacity: 0 },
+                    {
+                        width: isMobile ? "12vw" : "7vw",
+                        scale: 1,
+                        opacity: 1,
+                        marginLeft: isMobile ? "1vw" : "0.5vw",
+                        marginRight: isMobile ? "1vw" : "0.5vw",
+                        duration: 0.8,
+                        ease: "power3.out",
+                        scrollTrigger: { trigger: cameraRef.current, start: "top 85%", toggleActions: "play none none none" }
+                    }
+                );
+            }
+
+            if (popcornRef.current) {
+                const isMobile = window.innerWidth < 768;
+                gsap.fromTo(popcornRef.current,
+                    { width: 0, scale: 0, opacity: 0 },
+                    {
+                        width: isMobile ? "12vw" : "7vw",
+                        scale: 1,
+                        opacity: 1,
+                        marginLeft: isMobile ? "1vw" : "0.5vw",
+                        marginRight: isMobile ? "1vw" : "0.5vw",
+                        duration: 0.8,
+                        ease: "power3.out",
+                        scrollTrigger: { trigger: popcornRef.current, start: "top 85%", toggleActions: "play none none none" }
+                    }
+                );
+            }
+        }, containerRef);
+
+        window.scrollTo(0, 0);
 
         if (imageRef.current) {
             gsap.fromTo(imageRef.current,
@@ -91,75 +204,8 @@ const Team = () => {
             );
         }
 
-        if (rocketRef.current) {
-            const isMobile = window.innerWidth < 768;
-            gsap.fromTo(rocketRef.current,
-                { width: 0, scale: 0, opacity: 0 },
-                {
-                    width: isMobile ? "19vw" : "11vw",
-                    scale: 1,
-                    opacity: 1,
-                    marginLeft: isMobile ? "-1.5vw" : "-0.7vw",
-                    marginRight: isMobile ? "-0.8vw" : "-0.3vw",
-                    duration: 0.8,
-                    ease: "power3.out",
-                    scrollTrigger: { trigger: rocketRef.current, start: "top 85%", toggleActions: "play none none reverse" }
-                }
-            );
-        }
-
-        if (globeRef.current) {
-            const isMobile = window.innerWidth < 768;
-            gsap.fromTo(globeRef.current,
-                { width: 0, scale: 0, opacity: 0 },
-                {
-                    width: isMobile ? "15vw" : "9vw",
-                    scale: 1,
-                    opacity: 1,
-                    marginLeft: isMobile ? "-2vw" : "-2.5vw",
-                    marginRight: isMobile ? "-2vw" : "-2.5vw",
-                    duration: 1.0,
-                    ease: "power3.out",
-                    scrollTrigger: { trigger: globeRef.current.closest('h2'), start: "top 85%", toggleActions: "play reverse play reverse" },
-                    delay: 1.1
-                }
-            );
-        }
-
-        if (cameraRef.current) {
-            const isMobile = window.innerWidth < 768;
-            gsap.fromTo(cameraRef.current,
-                { width: 0, scale: 0, opacity: 0 },
-                {
-                    width: isMobile ? "12vw" : "7vw",
-                    scale: 1,
-                    opacity: 1,
-                    marginLeft: isMobile ? "1vw" : "0.5vw",
-                    marginRight: isMobile ? "1vw" : "0.5vw",
-                    duration: 0.8,
-                    ease: "power3.out",
-                    scrollTrigger: { trigger: cameraRef.current, start: "top 85%", toggleActions: "play none none reverse" }
-                }
-            );
-        }
-
-        if (popcornRef.current) {
-            const isMobile = window.innerWidth < 768;
-            gsap.fromTo(popcornRef.current,
-                { width: 0, scale: 0, opacity: 0 },
-                {
-                    width: isMobile ? "12vw" : "7vw",
-                    scale: 1,
-                    opacity: 1,
-                    marginLeft: isMobile ? "1vw" : "0.5vw",
-                    marginRight: isMobile ? "1vw" : "0.5vw",
-                    duration: 0.8,
-                    ease: "power3.out",
-                    scrollTrigger: { trigger: popcornRef.current, start: "top 85%", toggleActions: "play none none reverse" }
-                }
-            );
-        }
-    }, [teamMembers, clientLogos, galleryImages, projects]);
+        return () => ctx.revert();
+    }, [teamMembers]);
 
     const displayLogos = [...clientLogos];
     const minSlots = Math.max(6, Math.ceil(displayLogos.length / 6) * 6);
@@ -167,26 +213,28 @@ const Team = () => {
         displayLogos.push({ id: `placeholder-${displayLogos.length}`, url: null });
     }
 
+    const containerRef = useRef();
+
     return (
-        <div className="bg-[#151515] text-[#F1F1F1] min-h-screen pt-32 selection:bg-white selection:text-black">
+        <div ref={containerRef} className="bg-[#0f0f0f] text-[#F1F1F1] min-h-screen pt-32 selection:bg-white selection:text-black">
             {/* Hero Section */}
             <section className="px-6 md:px-[3vw] pt-12 md:pt-6 pb-20 relative">
                 <h1 ref={titleRef} className="font-display text-[10vw] md:text-[min(8.5vw,160px)] tracking-[-0.02em] leading-[0.9] flex flex-col justify-center uppercase overflow-hidden">
-                    <span className="flex overflow-hidden items-center flex-wrap">
+                    <span className="flex overflow-hidden items-center flex-nowrap whitespace-nowrap">
                         {splitText('We Design the ')}
-                        <span className="letter-anim inline-block align-baseline">
+                        <span className="char inline-block align-baseline ml-2">
                             <SwapText auto initialText="Business." finalText="Business." finalTextClassName="text-[#39ff14]" />
                         </span>
                     </span>
-                    <span className="flex overflow-hidden items-center flex-wrap">
+                    <span className="flex overflow-hidden items-center flex-nowrap whitespace-nowrap">
                         {splitText('We Develop the ')}
-                        <span className="letter-anim inline-block align-baseline">
+                        <span className="char inline-block align-baseline ml-2">
                             <SwapText auto initialText="Experience." finalText="Experience." finalTextClassName="text-[#39ff14]" />
                         </span>
                     </span>
-                    <span className="flex overflow-hidden items-center flex-wrap">
+                    <span className="flex overflow-hidden items-center flex-nowrap whitespace-nowrap">
                         {splitText('We Deliver the ')}
-                        <span className="letter-anim inline-block align-baseline">
+                        <span className="char inline-block align-baseline ml-2">
                             <SwapText auto initialText="Brand." finalText="Brand." finalTextClassName="text-[#39ff14]" />
                         </span>
                     </span>
@@ -208,17 +256,17 @@ const Team = () => {
                 <div className="px-6 md:px-[3vw]">
                     <div className="flex gap-[0.5vw] text-[14px] md:text-[17px] font-bold uppercase tracking-widest mb-8 text-[#5C5C5C]">01 / OUR ESTEEMED CLIENTS</div>
                     <h2 className="font-display text-[15vw] md:text-[7.5vw] tracking-[-0.02em] leading-[1.12] uppercase reveal-text">
-                        <span className="flex overflow-hidden">{splitText('BRANDS THAT HAVE')}</span>
-                        <span className="flex overflow-hidden">{splitText('SUCCESSFULLY')}</span>
-                        <span className="flex items-center flex-wrap overflow-hidden">
+                        <span className="flex overflow-hidden whitespace-nowrap flex-nowrap">{splitText('BRANDS THAT HAVE')}</span>
+                        <span className="flex overflow-hidden whitespace-nowrap flex-nowrap">{splitText('SUCCESSFULLY')}</span>
+                        <span className="flex items-center flex-wrap overflow-hidden whitespace-nowrap flex-nowrap">
                             {splitText('GONE LIVE')}
-                            <img ref={globeRef} src="/globe.png" alt="Globe" className="h-auto object-contain inline-block w-0 opacity-0 scale-0" />
+                            <img ref={globeRef} src="/globe.png" alt="Globe" className="h-auto object-contain inline-block w-0 opacity-0 scale-0 mx-2" />
                             {splitText('WITH US')}
                         </span>
                     </h2>
                     <div className="mt-[15vw] md:mt-[4vw] grid grid-cols-2 md:grid-cols-6 border-l border-t border-[#5C5C5C]">
-                        {displayLogos.map((logo) => (
-                            <div key={logo.id} className="aspect-square border-r border-b border-[#5C5C5C] flex items-center justify-center relative group bg-[#151515]">
+                        {displayLogos.map((logo, idx) => (
+                            <div key={logo._id || idx} className="aspect-square border-r border-b border-[#5C5C5C] flex items-center justify-center relative group bg-[#0f0f0f]">
                                 {logo.url ? <img src={logo.url} alt="Brand" className="w-[75%] h-auto object-contain" /> : <span className="text-[#5C5C5C] text-[10px] font-bold uppercase tracking-widest italic">Very Soon</span>}
                             </div>
                         ))}
@@ -231,46 +279,40 @@ const Team = () => {
                 <div className="px-6 md:px-[4vw]">
                     <div className="flex gap-[0.5vw] text-[14px] md:text-[17px] font-bold uppercase tracking-widest text-[#5C5C5C]">02 / A LI'L ABOUT US</div>
                     <h1 className="font-display text-[19vw] md:text-[min(12vw,220px)] tracking-[-0.02em] leading-[1.12] uppercase reveal-text flex flex-wrap justify-center mt-4">
-                        <span className="flex overflow-hidden">{splitText('MEET OUR')}</span>
-                        <img ref={rocketRef} src="/rocket.webp" alt="Rocket" className="h-auto object-contain inline-block w-0 opacity-0" />
-                        <span className="flex overflow-hidden">{splitText('TEAM')}</span>
+                        <span className="flex overflow-hidden whitespace-nowrap flex-nowrap">{splitText('MEET OUR')}</span>
+                        <img ref={rocketRef} src="/rocket.webp" alt="Rocket" className="h-auto object-contain inline-block w-0 opacity-0 mx-4" />
+                        <span className="flex overflow-hidden whitespace-nowrap flex-nowrap">{splitText('TEAM')}</span>
                     </h1>
                     <div className="grid grid-cols-1 md:grid-cols-3 mt-20 md:border-t md:border-l border-[#D0D0D0]">
-                        {[
-                            // Mapping members to explicit grid slots to match the requested asymmetrical layout
-                            { member: teamMembers[0], slot: 1 }, // Row 1, Col 1
-                            { empty: true, slot: 2 },           // Row 1, Col 2 (Empty)
-                            { member: teamMembers[1], slot: 3 }, // Row 1, Col 3
-                            { empty: true, slot: 4 },           // Row 2, Col 1 (Empty)
-                            { member: teamMembers[2], slot: 5 }, // Row 2, Col 2
-                            { member: teamMembers[3], slot: 6 }, // Row 2, Col 3
-                            { member: teamMembers[4], slot: 7 }, // Row 3, Col 1
-                            { empty: true, slot: 8 },           // Row 3, Col 2 (Empty)
-                            { member: teamMembers[5], slot: 9 }  // Row 3, Col 3
-                        ].map((item, idx) => (
-                            <div key={idx} className={`border-r border-b border-[#D0D0D0] relative p-[3vw] md:p-[1.25vw] min-h-[340px] md:min-h-[400px] flex flex-col ${item.empty || !item.member ? 'hidden md:block bg-transparent' : 'bg-transparent'}`}>
-                                {!item.empty && item.member && (
+                        {(teamMembers.length > 0 ? teamMembers : [{
+                            id: 'Add your team',
+                            name: 'No team members yet',
+                            title: 'Add team in admin panel',
+                            tags: ['Admin', 'CMS'],
+                            photo: ''
+                        }]).map((member, idx) => (
+                            <div key={member._id || idx} className={`border-r border-b border-[#D0D0D0] relative p-[3vw] md:p-[1.25vw] min-h-[340px] md:min-h-[400px] flex flex-col bg-transparent`}>
                                     <>
                                         <div className="flex justify-between items-start">
                                             <div className="w-[45%] aspect-[3/4] overflow-hidden">
-                                                {item.member.photo ? (
-                                                    <img src={item.member.photo} alt={item.member.name} className="w-full h-full object-cover" />
+                                                {member.photo ? (
+                                                    <img src={member.photo} alt={member.name} className="w-full h-full object-cover" />
                                                 ) : (
                                                     <div className="w-full h-full bg-[#1A1A1A] flex items-center justify-center text-[10px] text-white/20 uppercase font-bold italic">No Photo</div>
                                                 )}
                                             </div>
-                                            <p className="text-[14px] md:text-[16px] font-bold text-white tracking-tight">{item.member.id}</p>
+                                            <p className="text-[14px] md:text-[16px] font-bold text-white tracking-tight">{member.id}</p>
                                         </div>
 
                                         <div className="mt-[12vw] md:mt-[2.5vw]">
                                             <h3 className="text-[32px] md:text-[52px] font-display font-black uppercase tracking-tight leading-[0.9] text-white">
-                                                {item.member.name}
+                                                {member.name}
                                             </h3>
                                             <div className="text-[15px] md:text-[21px] text-white mt-[2vw] md:mt-[1vw] leading-tight font-medium opacity-90">
-                                                {item.member.title}
+                                                {member.title}
                                             </div>
                                             <div className="flex gap-[1.5vw] md:gap-[.25vw] flex-wrap mt-[6vw] md:mt-[4vw] pb-[.5vw]">
-                                                {item.member.tags?.map((tag, i) => (
+                                                {member.tags?.map((tag, i) => (
                                                     <div key={i} className="rounded-full border-[.5px] border-[#F1F1F1] px-[2.5vw] md:px-[.6vw] py-[1vw] md:py-[.3vw] text-[11px] md:text-[13px] text-white hover:bg-white hover:text-black transition-all cursor-default uppercase font-bold tracking-tight">
                                                         {tag}
                                                     </div>
@@ -278,7 +320,6 @@ const Team = () => {
                                             </div>
                                         </div>
                                     </>
-                                )}
                             </div>
                         ))}
                     </div>
@@ -290,9 +331,9 @@ const Team = () => {
                 <div className="px-6 md:px-[4vw]">
                     <div className="flex gap-[0.5vw] text-[14px] md:text-[17px] font-bold uppercase tracking-widest text-[#5C5C5C]">03 / BEHIND THE SCENES</div>
                     <h1 className="font-display text-[19vw] md:text-[min(12vw,220px)] tracking-[-0.02em] leading-[1.12] uppercase reveal-text flex flex-wrap justify-center mt-4">
-                        <span className="flex overflow-hidden">{splitText('DAY IN LIFE')}</span>
-                        <img ref={cameraRef} src="/camera.webp" alt="Camera" className="h-auto object-contain inline-block w-0 opacity-0 scale-0" />
-                        <span className="flex overflow-hidden">{splitText('REAL')}</span>
+                        <span className="flex overflow-hidden whitespace-nowrap flex-nowrap">{splitText('DAY IN LIFE')}</span>
+                        <img ref={cameraRef} src="/camera.webp" alt="Camera" className="h-auto object-contain inline-block w-0 opacity-0 scale-0 mx-4" />
+                        <span className="flex overflow-hidden whitespace-nowrap flex-nowrap">{splitText('REAL')}</span>
                     </h1>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 mt-12">
                         {Array.from({ length: 9 }).map((_, i) => {

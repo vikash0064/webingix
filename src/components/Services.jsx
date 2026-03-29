@@ -29,7 +29,7 @@ const services = [
 ];
 
 const renderCorner = (type) => {
-    const baseClasses = "aspect-square border border-[#5C5C5C] absolute w-[3vw] md:w-[0.55vw] bg-[#151515] z-[3]";
+    const baseClasses = "aspect-square border border-[#5C5C5C] absolute w-[3vw] md:w-[0.55vw] bg-[#0f0f0f] z-[3]";
     switch (type) {
         case 'tl': return <div className={`${baseClasses} top-0 left-0 -translate-x-1/2 -translate-y-1/2`} />;
         case 'tr': return <div className={`${baseClasses} top-0 right-0 translate-x-1/2 -translate-y-1/2`} />;
@@ -43,47 +43,63 @@ const Services = () => {
     const containerRef = useRef();
     const headingRef = useRef();
 
-    useEffect(() => {
-        if (headingRef.current) {
-            gsap.fromTo(headingRef.current.querySelectorAll('.letter-anim'),
-                { y: 40, opacity: 0 },
-                {
-                    y: 0, opacity: 1,
-                    duration: 0.6,
-                    stagger: 0.04,
-                    ease: "power3.out",
-                    scrollTrigger: {
-                        trigger: headingRef.current,
-                        start: "top 85%",
-                        toggleActions: 'play reverse play reverse'
+    React.useLayoutEffect(() => {
+        const ctx = gsap.context(() => {
+            if (headingRef.current) {
+                gsap.fromTo(headingRef.current.querySelectorAll('.letter-anim'),
+                    { y: 40, opacity: 0 },
+                    {
+                        y: 0, opacity: 1,
+                        duration: 0.8,
+                        stagger: 0.03,
+                        ease: "power4.out",
+                        scrollTrigger: {
+                            trigger: headingRef.current,
+                            start: "top 90%",
+                            toggleActions: 'play none none none' // Play once and stay visible
+                        }
                     }
-                }
-            );
-        }
+                );
+            }
+        });
+
+        const refreshAll = () => {
+            setTimeout(() => ScrollTrigger.refresh(), 200);
+        };
+
+        window.addEventListener('webingix:projects_data_updated', refreshAll);
+        return () => {
+            ctx.revert();
+            window.removeEventListener('webingix:projects_data_updated', refreshAll);
+        };
     }, []);
 
     const splitText = (text) => {
-        return text.split('').map((char, index) => (
-            <span key={index} className="inline-block letter-anim">
-                {char === ' ' ? '\u00A0' : char}
-            </span>
+        return text.split(' ').map((word, wIdx) => (
+            <div key={wIdx} className="word inline-block mr-[0.12em] overflow-hidden align-top">
+                {word.split('').map((char, cIdx) => (
+                    <span key={cIdx} className="char inline-block letter-anim">
+                        {char}
+                    </span>
+                ))}
+            </div>
         ));
     };
 
     return (
-        <section ref={containerRef} className="bg-transparent pt-20 md:pt-32 pb-20 md:pb-32 relative z-[30] overflow-hidden">
+        <section ref={containerRef} className="bg-transparent pt-10 md:pt-16 pb-20 md:pb-32 relative z-[30] overflow-hidden">
             {/* Header Section */}
             <div className="container mx-auto px-6 md:px-0 md:pl-[2vw] max-w-[1800px] relative z-10 pointer-events-none mb-12 md:mb-16">
                 <div className="flex items-center text-white text-[11px] md:text-[min(1.3vw,15px)] font-medium tracking-[0.3em] uppercase mb-[2vw]">
                     <span>03 / OUR SERVICES</span>
                 </div>
 
-                <div ref={headingRef} className="flex flex-col md:flex-row md:items-end gap-[1vw] md:pl-[2vw]">
+                <div ref={headingRef} className="flex flex-col md:flex-row md:items-end gap-[0.25vw] md:pl-[2vw]">
                     <h2 className="text-[clamp(1.5rem,7.2vw,8.5rem)] leading-[0.85] font-display font-normal text-white uppercase tracking-tighter whitespace-nowrap flex">
                         {splitText('WHAT WE BUILD')}
                     </h2>
-                    <span className="text-[clamp(0.8rem,2.4vw,2.5rem)] leading-none font-display font-medium text-[#39ff14] uppercase tracking-tighter mb-[0.8vw] flex mt-2 md:mt-0">
-                        {splitText('/ OUR EXPERTISE')}
+                    <span className="text-[clamp(0.8rem,2.4vw,2.5rem)] leading-none font-display font-medium text-[#39ff14] uppercase tracking-tighter mb-[0.8vw] flex mt-2 md:mt-0 md:ml-[-0.8vw]">
+                        {splitText('/OUR EXPERTISE')}
                     </span>
                 </div>
             </div>
@@ -92,7 +108,7 @@ const Services = () => {
             <div className="container mx-auto px-6 md:px-0 max-w-[1800px] relative z-[5] mt-12 md:mt-20">
                 <div className="grid grid-cols-1 md:grid-cols-4 w-full border-t border-[#5C5C5C]">
                     {services.map((item, idx) => (
-                        <div key={idx} className={`relative p-8 md:p-12 border-b md:border-b-0 md:border-r border-[#5C5C5C] last:border-r-0 group bg-[#151515] hover:bg-[#1a1a1a] transition-colors duration-500`}>
+                        <div key={idx} className={`relative p-8 md:p-12 border-b md:border-b-0 md:border-r border-[#5C5C5C] last:border-r-0 group bg-[#0f0f0f] hover:bg-[#151515] transition-colors duration-500`}>
                             {/* Corner dots logic */}
                             {idx === 0 && renderCorner('tl')}
                             {idx === 0 && renderCorner('bl')}

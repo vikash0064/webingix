@@ -12,7 +12,6 @@ import ServicesPage from './pages/ServicesPage';
 import ProjectsPage from './pages/ProjectsPage';
 import ContactPage from './pages/ContactPage';
 import AdminAccessPage from './pages/AdminAccessPage';
-import BackgroundGrid from './components/BackgroundGrid';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -55,11 +54,10 @@ function App() {
   }, [location.pathname]);
 
   return (
-    <div className="min-h-screen bg-[#303030] md:bg-black text-white font-sans relative" style={{ fontFamily: "'Inter', sans-serif" }}>
-      <BackgroundGrid />
+    <div className="min-h-screen bg-[#151515] text-white font-sans relative" style={{ fontFamily: "'Inter', sans-serif" }}>
       {showHeader && <Header />}
       <main className="relative z-10 w-full">
-        <div className="mx-[10px] md:mx-0 bg-[#151515] md:bg-transparent min-h-screen md:min-h-0">
+        <div className="mx-[10px] md:mx-0 bg-transparent min-h-screen md:min-h-0">
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/about" element={<AboutPage />} />
@@ -71,7 +69,7 @@ function App() {
         </div>
       </main>
       {showFooter && (
-        <div className="mx-[10px] md:mx-0 bg-[#151515] md:bg-transparent">
+        <div className="mx-[10px] md:mx-0 bg-transparent">
           <Footer />
         </div>
       )}

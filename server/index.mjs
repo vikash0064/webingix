@@ -3,6 +3,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import mongoose from 'mongoose';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -28,103 +29,17 @@ const MIME_TYPES = {
     '.mp4': 'video/mp4'
 };
 const IMMUTABLE_EXTENSIONS = new Set([
-    '.js',
-    '.css',
-    '.png',
-    '.jpg',
-    '.jpeg',
-    '.webp',
-    '.svg',
-    '.ico',
-    '.json',
-    '.woff',
-    '.woff2',
-    '.ttf',
-    '.otf',
-    '.eot',
-    '.mp4'
+    '.js', '.css', '.png', '.jpg', '.jpeg', '.webp', '.svg', '.ico', '.json', '.woff', '.woff2', '.ttf', '.otf', '.eot', '.mp4'
 ]);
 
-const isPathInsideDir = (targetPath, dirPath) => {
-    if (!targetPath || !dirPath) {
-        return false;
-    }
-
-    const paddedDir = dirPath.endsWith(path.sep) ? dirPath : `${dirPath}${path.sep}`;
-    return targetPath === dirPath || targetPath.startsWith(paddedDir);
-};
-
-const getDistFilePath = (pathname) => {
-    if (!pathname) {
-        return null;
-    }
-
-    const relativeRequest = pathname === '/' ? 'index.html' : pathname.replace(/^\/+/, '');
-    const candidate = path.normalize(path.join(DIST_DIR, relativeRequest || 'index.html'));
-
-    return isPathInsideDir(candidate, DIST_DIR) ? candidate : null;
-};
-
-const sendDistFile = (res, filePath) => {
-    const ext = path.extname(filePath).toLowerCase();
-    const contentType = MIME_TYPES[ext] || 'application/octet-stream';
-    const cacheControl = ext === '.html'
-        ? 'no-cache'
-        : IMMUTABLE_EXTENSIONS.has(ext)
-            ? 'public, max-age=31536000, immutable'
-            : 'public, max-age=604800';
-
-    res.writeHead(200, {
-        'Content-Type': contentType,
-        'Cache-Control': cacheControl
-    });
-
-    const stream = fs.createReadStream(filePath);
-    stream.on('error', (error) => {
-        console.error('[admin-server] Static file stream error:', error);
-        if (!res.headersSent) {
-            res.writeHead(500);
-        }
-        res.end('Internal server error');
-    });
-    stream.pipe(res);
-};
-
-const tryServeDistFile = (res, pathname) => {
-    if (!fs.existsSync(DIST_DIR)) {
-        return false;
-    }
-
-    const filePath = getDistFilePath(pathname);
-    if (!filePath || !fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) {
-        return false;
-    }
-
-    sendDistFile(res, filePath);
-    return true;
-};
-
-if (!fs.existsSync(DIST_DIR)) {
-    console.warn(`[admin-server] Dist directory not found at ${DIST_DIR}. Front-end routes will return 404 until the client is built.`);
-}
-
 const loadEnvFile = (envPath) => {
-    if (!fs.existsSync(envPath)) {
-        return {};
-    }
-
+    if (!fs.existsSync(envPath)) return {};
     const content = fs.readFileSync(envPath, 'utf8');
     return content.split(/\r?\n/).reduce((acc, line) => {
         const trimmed = line.trim();
-        if (!trimmed || trimmed.startsWith('#')) {
-            return acc;
-        }
-
+        if (!trimmed || trimmed.startsWith('#')) return acc;
         const separatorIndex = trimmed.indexOf('=');
-        if (separatorIndex === -1) {
-            return acc;
-        }
-
+        if (separatorIndex === -1) return acc;
         const key = trimmed.slice(0, separatorIndex).trim();
         const rawValue = trimmed.slice(separatorIndex + 1).trim();
         acc[key] = rawValue.replace(/^['"]|['"]$/g, '');
@@ -135,284 +50,319 @@ const loadEnvFile = (envPath) => {
 const fileEnv = loadEnvFile(path.join(__dirname, '.env'));
 const env = { ...fileEnv, ...process.env };
 
-const PORT = Number(process.env.PORT || env.ADMIN_SERVER_PORT || 8788);
+const PORT = Number(env.PORT || env.ADMIN_SERVER_PORT || 8788);
 const CLIENT_ORIGIN = env.ADMIN_CLIENT_ORIGIN || 'http://localhost:5173';
 const SESSION_SECRET = env.ADMIN_SESSION_SECRET || 'change-me-in-server-env';
 const ADMIN_PIN = env.ADMIN_PIN || '';
-const PIN_HASH = env.ADMIN_PIN_HASH || '';
-const PIN_SALT = env.ADMIN_PIN_SALT || '';
+const MONGO_URI = env.MONGODB_URI || 'mongodb://127.0.0.1:27017/webingix';
 const SESSION_COOKIE = 'webingix_admin_session';
 const SESSION_TTL_MS = 1000 * 60 * 60 * 12;
 
-if (!ADMIN_PIN && (!PIN_HASH || !PIN_SALT)) {
-    console.warn('[admin-server] Missing ADMIN_PIN or ADMIN_PIN_HASH/ADMIN_PIN_SALT in server/.env');
+// --- MongoDB Schemas & Connection ---
+async function connectDB() {
+    try {
+        await mongoose.connect(MONGO_URI);
+        console.log('[admin-server] MongoDB connected at:', MONGO_URI);
+        await seedProjects();
+        await seedSocials();
+    } catch (err) {
+        console.error('[admin-server] MongoDB connection error:', err);
+    }
+}
+connectDB();
+
+async function seedProjects() {
+    try {
+        const count = await Project.countDocuments();
+        if (count === 0) {
+            const initialProjects = [
+                {
+                    id: '01',
+                    title: 'RetailCo',
+                    time: '2 h',
+                    clientMsg: 'We need a futuristic shopping experience with smooth animations and fast checkout.',
+                    ourMsg: "Let's build it with React and a fast premium frontend experience.",
+                    image: '/div.jpg',
+                    order: 0
+                },
+                {
+                    id: '02',
+                    title: 'TravelMind',
+                    time: '5 h',
+                    clientMsg: 'Build an AI-powered app that generates custom travel itineraries for users.',
+                    ourMsg: 'We can combine AI planning, maps, and a polished user flow.',
+                    image: '/laptop.webp',
+                    order: 1
+                },
+                {
+                    id: '03',
+                    title: 'EventPro',
+                    time: '12 h',
+                    clientMsg: 'We handle 500 plus events a year. We need a system that can keep up with us.',
+                    ourMsg: 'Real-time dashboards, ticketing, and analytics will make this scale.',
+                    image: '/camera.webp',
+                    order: 2
+                },
+                {
+                    id: '04',
+                    title: 'SmileCare',
+                    time: '24 h',
+                    clientMsg: 'We want a premium website that makes patients excited about dentistry.',
+                    ourMsg: 'We will keep it calm, clean, and confidence-building for patients.',
+                    image: '/yo.png',
+                    order: 3
+                }
+            ];
+            await Project.insertMany(initialProjects);
+            console.log('[admin-server] Seeded initial projects');
+        }
+    } catch (err) {
+        console.error('[admin-server] Failed to seed projects:', err);
+    }
 }
 
-if (SESSION_SECRET === 'change-me-in-server-env') {
-    console.warn('[admin-server] Using fallback session secret. Set ADMIN_SESSION_SECRET in server/.env');
+async function seedSocials() {
+    try {
+        const count = await Social.countDocuments();
+        if (count === 0) {
+            const initialSocials = [
+                { name: 'X', url: 'https://x.com/webingix', order: 0 },
+                { name: 'Facebook', url: 'https://facebook.com/webingix', order: 1 },
+                { name: 'LinkedIn', url: 'https://linkedin.com/company/webingix', order: 2 },
+                { name: 'Instagram', url: 'https://instagram.com/webingix', order: 3 },
+                { name: 'WhatsApp', url: 'https://wa.me/8153929447', order: 4 },
+                { name: 'Email', url: 'mailto:contact@webingix.com', order: 5 },
+                { name: 'Call', url: 'tel:+918153929447', order: 6 }
+            ];
+            await Social.insertMany(initialSocials);
+            console.log('[admin-server] Seeded initial socials');
+        }
+    } catch (err) {
+        console.error('[admin-server] Failed to seed socials:', err);
+    }
 }
+
+const SubmissionSchema = new mongoose.Schema({
+    timestamp: { type: Date, default: Date.now },
+    name: String,
+    method: String,
+    contact: String,
+    project: String,
+    type: String,
+    timeline: String,
+    details: String
+});
+const Submission = mongoose.model('Submission', SubmissionSchema);
+
+const ProjectSchema = new mongoose.Schema({
+    id: String,
+    title: String,
+    clientMsg: String,
+    ourMsg: String,
+    time: String,
+    image: String,
+    desc: String,
+    tags: [String],
+    order: { type: Number, default: 0 }
+});
+const Project = mongoose.model('Project', ProjectSchema);
+
+const LogoSchema = new mongoose.Schema({ url: String, order: Number });
+const Logo = mongoose.model('Logo', LogoSchema);
+
+const MemberSchema = new mongoose.Schema({
+    id: String,
+    name: String,
+    title: String,
+    tags: [String],
+    photo: String,
+    order: Number
+});
+const Member = mongoose.model('Member', MemberSchema);
+
+const GallerySchema = new mongoose.Schema({ url: String, order: Number });
+const GalleryImg = mongoose.model('GalleryImg', GallerySchema);
+
+const SocialSchema = new mongoose.Schema({ name: String, url: String, order: Number });
+const Social = mongoose.model('Social', SocialSchema);
+
+// --- Server Utils ---
+const isPathInsideDir = (targetPath, dirPath) => {
+    if (!targetPath || !dirPath) return false;
+    const paddedDir = dirPath.endsWith(path.sep) ? dirPath : `${dirPath}${path.sep}`;
+    return targetPath === dirPath || targetPath.startsWith(paddedDir);
+};
+
+const tryServeDistFile = (res, pathname) => {
+    if (!fs.existsSync(DIST_DIR)) return false;
+    const relativeRequest = pathname === '/' ? 'index.html' : pathname.replace(/^\/+/, '');
+    const filePath = path.normalize(path.join(DIST_DIR, relativeRequest || 'index.html'));
+    if (!isPathInsideDir(filePath, DIST_DIR)) return false;
+    if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) return false;
+
+    const ext = path.extname(filePath).toLowerCase();
+    const contentType = MIME_TYPES[ext] || 'application/octet-stream';
+    res.writeHead(200, { 'Content-Type': contentType, 'Cache-Control': ext === '.html' ? 'no-cache' : IMMUTABLE_EXTENSIONS.has(ext) ? 'public, max-age=31536000, immutable' : 'public, max-age=604800' });
+    fs.createReadStream(filePath).pipe(res);
+    return true;
+};
 
 const json = (res, statusCode, payload, extraHeaders = {}) => {
-    res.writeHead(statusCode, {
-        'Content-Type': 'application/json',
-        ...extraHeaders
-    });
+    res.writeHead(statusCode, { 'Content-Type': 'application/json', ...extraHeaders });
     res.end(JSON.stringify(payload));
 };
 
-const createSessionToken = (expiresAt) => {
-    const payload = String(expiresAt);
-    const signature = crypto
-        .createHmac('sha256', SESSION_SECRET)
-        .update(payload)
-        .digest('hex');
-
-    return `${payload}.${signature}`;
-};
-
 const isValidSessionToken = (token) => {
-    if (!token || !token.includes('.')) {
-        return false;
-    }
-
+    if (!token || !token.includes('.')) return false;
     const [expiresAt, signature] = token.split('.');
-    if (!expiresAt || !signature) {
-        return false;
-    }
-
-    const expected = crypto
-        .createHmac('sha256', SESSION_SECRET)
-        .update(expiresAt)
-        .digest('hex');
-
+    if (!expiresAt || !signature) return false;
+    const expected = crypto.createHmac('sha256', SESSION_SECRET).update(expiresAt).digest('hex');
     try {
-        const isSame = crypto.timingSafeEqual(
-            Buffer.from(signature, 'hex'),
-            Buffer.from(expected, 'hex')
-        );
-
-        return isSame && Number(expiresAt) > Date.now();
-    } catch {
-        return false;
-    }
-};
-
-const parseCookies = (cookieHeader = '') => {
-    return cookieHeader.split(';').reduce((acc, part) => {
-        const [key, ...valueParts] = part.trim().split('=');
-        if (!key) {
-            return acc;
-        }
-
-        acc[key] = decodeURIComponent(valueParts.join('='));
-        return acc;
-    }, {});
+        return crypto.timingSafeEqual(Buffer.from(signature, 'hex'), Buffer.from(expected, 'hex')) && Number(expiresAt) > Date.now();
+    } catch { return false; }
 };
 
 const parseJsonBody = async (req) => {
     const chunks = [];
-
     for await (const chunk of req) {
         chunks.push(chunk);
-        if (Buffer.concat(chunks).length > 10_000) {
-            throw new Error('Payload too large');
-        }
+        if (Buffer.concat(chunks).length > 20_000_000) throw new Error('Payload too large'); // Increased for images
     }
-
-    if (chunks.length === 0) {
-        return {};
-    }
-
-    return JSON.parse(Buffer.concat(chunks).toString('utf8'));
-};
-
-const verifyPin = (pin) => {
-    if (!pin) {
-        return false;
-    }
-
-    if (ADMIN_PIN) {
-        return pin === ADMIN_PIN;
-    }
-
-    if (!PIN_HASH || !PIN_SALT) {
-        return false;
-    }
-
-    const derived = crypto.scryptSync(pin, PIN_SALT, 64).toString('hex');
-
-    try {
-        return crypto.timingSafeEqual(
-            Buffer.from(derived, 'hex'),
-            Buffer.from(PIN_HASH, 'hex')
-        );
-    } catch {
-        return false;
-    }
+    return chunks.length === 0 ? {} : JSON.parse(Buffer.concat(chunks).toString('utf8'));
 };
 
 const createCorsHeaders = (origin) => {
     const allowedOrigin = origin === CLIENT_ORIGIN ? origin : CLIENT_ORIGIN;
-    return {
-        'Access-Control-Allow-Origin': allowedOrigin,
-        'Access-Control-Allow-Credentials': 'true',
-        'Access-Control-Allow-Headers': 'Content-Type',
-        'Access-Control-Allow-Methods': 'GET,POST,OPTIONS'
-    };
+    return { 'Access-Control-Allow-Origin': allowedOrigin, 'Access-Control-Allow-Credentials': 'true', 'Access-Control-Allow-Headers': 'Content-Type', 'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS' };
 };
 
+// --- Server Implementation ---
 const server = http.createServer(async (req, res) => {
     const origin = req.headers.origin || CLIENT_ORIGIN;
     const corsHeaders = createCorsHeaders(origin);
-
-    console.log(`[admin-server] ${req.method} ${req.url}`);
-
-    const LOG_FILE = path.join(__dirname, 'submissions.csv');
-    if (!fs.existsSync(LOG_FILE)) {
-        fs.writeFileSync(LOG_FILE, 'Timestamp,Name,Method,Phone/Email,Project Name,Type,Timeline,Details\n');
-    }
-
-    if (req.method === 'OPTIONS') {
-        res.writeHead(204, corsHeaders);
-        res.end();
-        return;
-    }
+    if (req.method === 'OPTIONS') { res.writeHead(204, corsHeaders); res.end(); return; }
 
     const url = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
-    const requestPath = url.pathname || '/';
-    const cleanPath = requestPath.replace(/\/$/, '') || '/';
+    const pathname = url.pathname;
+    const cookies = (req.headers.cookie || '').split(';').reduce((acc, part) => {
+        const [k, ...v] = part.trim().split('=');
+        if (k) acc[k] = decodeURIComponent(v.join('='));
+        return acc;
+    }, {});
+    const isAuth = isValidSessionToken(cookies[SESSION_COOKIE]);
 
-    // API Routes
-    if (req.method === 'GET' && url.pathname === '/api/admin/session') {
-        const cookies = parseCookies(req.headers.cookie);
-        return json(res, 200, { authenticated: isValidSessionToken(cookies[SESSION_COOKIE]) }, corsHeaders);
-    }
+    console.log(`[admin-server] ${req.method} ${pathname}`);
 
-    if (req.method === 'POST' && url.pathname === '/api/admin/login') {
+    // Public API: Contact Submission
+    if (req.method === 'POST' && pathname === '/api/contact') {
         try {
-            const body = await parseJsonBody(req);
-            const pin = String(body.pin || '');
-
-            if (!verifyPin(pin)) {
-                return json(res, 401, { error: 'Incorrect PIN' }, corsHeaders);
-            }
-
-            const expiresAt = Date.now() + SESSION_TTL_MS;
-            const token = createSessionToken(expiresAt);
-            const secureFlag = origin.startsWith('https://') ? '; Secure' : '';
-
-            return json(
-                res,
-                200,
-                { authenticated: true },
-                {
-                    ...corsHeaders,
-                    'Set-Cookie': `${SESSION_COOKIE}=${token}; HttpOnly; Path=/; SameSite=Lax; Max-Age=${SESSION_TTL_MS / 1000}${secureFlag}`
-                }
-            );
-        } catch {
-            return json(res, 400, { error: 'Invalid request body' }, corsHeaders);
-        }
-    }
-
-    if (req.method === 'POST' && url.pathname === '/api/admin/logout') {
-        return json(
-            res,
-            200,
-            { authenticated: false },
-            {
-                ...corsHeaders,
-                'Set-Cookie': `${SESSION_COOKIE}=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0`
-            }
-        );
-    }
-
-    if (req.method === 'POST' && url.pathname === '/api/contact') {
-        try {
-            const body = await parseJsonBody(req);
-            const { name, contactMethod, phone, projectName, projectType, timeline, extraDetails, submittedAt } = body;
-            
-            const csvRow = [
-                submittedAt || new Date().toISOString(),
-                `"${(name || '').replace(/"/g, '""')}"`,
-                contactMethod,
-                `"${(phone || '').replace(/"/g, '""')}"`,
-                `"${(projectName || '').replace(/"/g, '""')}"`,
-                projectType,
-                timeline,
-                `"${(extraDetails || '').replace(/"/g, '""')}"`
-            ].join(',');
-
-            fs.appendFileSync(LOG_FILE, csvRow + '\n');
+            const b = await parseJsonBody(req);
+            await Submission.create({
+                name: b.name,
+                method: b.contactMethod,
+                contact: b.phone || b.email,
+                project: b.projectName,
+                type: b.projectType,
+                timeline: b.timeline,
+                details: b.extraDetails,
+                timestamp: b.submittedAt ? new Date(b.submittedAt) : new Date()
+            });
             return json(res, 200, { ok: true }, corsHeaders);
-        } catch (error) {
-            console.error('[admin-server] Error saving submission:', error);
-            return json(res, 500, { error: 'Internal server error' }, corsHeaders);
-        }
+        } catch { return json(res, 500, { error: 'Internal Error' }, corsHeaders); }
     }
 
-    if (req.method === 'GET' && (cleanPath === '/api/admin/submissions' || cleanPath.endsWith('/submissions'))) {
-        const cookies = parseCookies(req.headers.cookie);
-        if (!isValidSessionToken(cookies[SESSION_COOKIE])) {
-            return json(res, 401, { error: 'Unauthorized' }, corsHeaders);
-        }
-
-        if (!fs.existsSync(LOG_FILE)) {
-            return json(res, 200, [], corsHeaders);
-        }
-
-        const lines = fs.readFileSync(LOG_FILE, 'utf8').split('\n').filter(Boolean);
-        const headers = lines[0].split(',');
-        const data = lines.slice(1).map(line => {
-            const parts = [];
-            let current = '';
-            let inQuotes = false;
-            for (let char of line) {
-                if (char === '"') inQuotes = !inQuotes;
-                else if (char === ',' && !inQuotes) {
-                    parts.push(current);
-                    current = '';
-                } else {
-                    current += char;
-                }
-            }
-            parts.push(current);
-
-            return headers.reduce((acc, h, i) => {
-                acc[h] = parts[i] || '';
-                return acc;
-            }, {});
-        });
-
+    // Public API: Content Retrieval
+    if (req.method === 'GET' && pathname === '/api/projects') {
+        const data = await Project.find().sort({ order: 1 });
+        return json(res, 200, data, corsHeaders);
+    }
+    if (req.method === 'GET' && pathname === '/api/logos') {
+        const data = await Logo.find().sort({ order: 1 });
+        return json(res, 200, data, corsHeaders);
+    }
+    if (req.method === 'GET' && pathname === '/api/team') {
+        const data = await Member.find().sort({ order: 1 });
+        return json(res, 200, data, corsHeaders);
+    }
+    if (req.method === 'GET' && pathname === '/api/gallery') {
+        const data = await GalleryImg.find().sort({ order: 1 });
+        return json(res, 200, data, corsHeaders);
+    }
+    if (req.method === 'GET' && pathname === '/api/socials') {
+        const data = await Social.find().sort({ order: 1 });
         return json(res, 200, data, corsHeaders);
     }
 
-    if (req.method === 'GET' && url.pathname === '/api/health') {
-        return json(res, 200, { ok: true }, corsHeaders);
+    // Admin Auth
+    if (req.method === 'POST' && pathname === '/api/admin/login') {
+        const b = await parseJsonBody(req);
+        if (b.pin === ADMIN_PIN) {
+            const expiresAt = Date.now() + SESSION_TTL_MS;
+            const token = `${expiresAt}.${crypto.createHmac('sha256', SESSION_SECRET).update(String(expiresAt)).digest('hex')}`;
+            return json(res, 200, { authenticated: true }, { ...corsHeaders, 'Set-Cookie': `${SESSION_COOKIE}=${token}; HttpOnly; Path=/; SameSite=Lax; Max-Age=${SESSION_TTL_MS / 1000}` });
+        }
+        return json(res, 401, { error: 'Wrong PIN' }, corsHeaders);
     }
 
-    // Front-end Static File Serving & SPA Routing
-    if ((req.method === 'GET' || req.method === 'HEAD') && !cleanPath.startsWith('/api')) {
-        // Try exact file first
-        if (tryServeDistFile(res, url.pathname)) {
-            return;
+    // Secure Admin API
+    if (pathname.startsWith('/api/admin') || ['POST', 'PUT', 'DELETE'].includes(req.method)) {
+        if (!isAuth && pathname !== '/api/admin/login' && pathname !== '/api/contact') {
+            return json(res, 401, { error: 'Unauthorized' }, corsHeaders);
         }
 
-        // Catch-all: serve index.html for SPA routes (like /admin)
-        if (tryServeDistFile(res, '/')) {
-            return;
+        // Submissions
+        if (req.method === 'GET' && pathname === '/api/admin/submissions') {
+            const data = await Submission.find().sort({ timestamp: -1 });
+            return json(res, 200, data, corsHeaders);
+        }
+
+        // Projects
+        if (req.method === 'POST' && pathname === '/api/admin/projects') {
+            const b = await parseJsonBody(req);
+            const p = await Project.create(b);
+            return json(res, 201, p, corsHeaders);
+        }
+        if (req.method === 'PUT' && pathname.startsWith('/api/admin/projects/')) {
+            const id = pathname.split('/').pop();
+            const b = await parseJsonBody(req);
+            const p = await Project.findByIdAndUpdate(id, b, { new: true });
+            return json(res, 200, p, corsHeaders);
+        }
+        if (req.method === 'DELETE' && pathname.startsWith('/api/admin/projects/')) {
+            const id = pathname.split('/').pop();
+            await Project.findByIdAndDelete(id);
+            return json(res, 200, { ok: true }, corsHeaders);
+        }
+
+        // Generic Dynamic Handlers (Logos, Team, Gallery, Socials)
+        const entityMap = { 
+            '/api/admin/logos': Logo, 
+            '/api/admin/team': Member, 
+            '/api/admin/gallery': GalleryImg,
+            '/api/admin/socials': Social 
+        };
+        for (const [pathKey, Model] of Object.entries(entityMap)) {
+            if (pathname === pathKey) {
+                if (req.method === 'POST') { const b = await parseJsonBody(req); const d = await Model.create(b); return json(res, 201, d, corsHeaders); }
+            }
+            if (pathname.startsWith(pathKey + '/')) {
+                const id = pathname.split('/').pop();
+                if (req.method === 'PUT') { const b = await parseJsonBody(req); const d = await Model.findByIdAndUpdate(id, b, { new: true }); return json(res, 200, d, corsHeaders); }
+                if (req.method === 'DELETE') { await Model.findByIdAndDelete(id); return json(res, 200, { ok: true }, corsHeaders); }
+            }
         }
     }
 
-    console.warn(`[admin-server] 404 for ${req.method} ${req.url}`);
+    if (req.method === 'GET' && pathname === '/api/admin/session') {
+        return json(res, 200, { authenticated: isAuth }, corsHeaders);
+    }
+
+    // Static Delivery
+    if ((req.method === 'GET' || req.method === 'HEAD') && !pathname.startsWith('/api')) {
+        if (tryServeDistFile(res, pathname) || tryServeDistFile(res, '/')) return;
+    }
+
     json(res, 404, { error: 'Not found' }, corsHeaders);
 });
 
-server.listen(PORT, '0.0.0.0', () => {
-    console.log(`[admin-server] Listening on port ${PORT}`);
-    console.log(`[admin-server] Client path resolved to: ${DIST_DIR}`);
-    if (!fs.existsSync(DIST_DIR)) {
-        console.error(`[admin-server] ERROR: Dist directory not found at ${DIST_DIR}`);
-    }
-});
-
+server.listen(PORT, '0.0.0.0', () => console.log(`[admin-server] Listening on port ${PORT}`));

@@ -16,14 +16,69 @@ const Contact = ({ isContactPage = false }) => {
     const [timeline, setTimeline] = useState('2 weeks');
     const [extraDetails, setExtraDetails] = useState('');
     const [isSubmitted, setIsSubmitted] = useState(false);
+    const [socials, setSocials] = useState([]);
     const contactLabel = isContactPage ? "05 / LET'S COLLABORATE" : "03 / LET'S COLLABORATE";
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        setIsSubmitted(true);
+
+        const payload = {
+            name,
+            contactMethod,
+            phone,
+            projectName,
+            projectType,
+            timeline,
+            extraDetails,
+            submittedAt: new Date().toISOString()
+        };
+
+        try {
+            const response = await fetch('/api/contact', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (response.ok) {
+                setIsSubmitted(true);
+                // Trigger a global event to notify the admin panel if it's open
+                window.dispatchEvent(new CustomEvent('webingix:new_lead_submitted'));
+            } else {
+                alert("Failed to submit. Please try again.");
+            }
+        } catch (err) {
+            console.error("Submission error:", err);
+            alert("Connection error. Please check your internet.");
+        }
+    };
+    const fetchSocials = async () => {
+        try {
+            const res = await fetch('/api/socials');
+            if (res.ok) setSocials(await res.json());
+        } catch (err) {
+            console.error("Failed to fetch socials:", err);
+        }
     };
 
     useEffect(() => {
+        fetchSocials();
+        const handleUpdate = () => fetchSocials();
+        window.addEventListener('webingix:projects_data_updated', handleUpdate);
+        return () => window.removeEventListener('webingix:projects_data_updated', handleUpdate);
+    }, []);
+
+    const socialSlots = [
+        { name: 'X', row: 1, col: 2, icon: '/logo/x.png', color: '#ffffff', url: 'https://x.com/' },
+        { name: 'Call', row: 1, col: 3, icon: '/logo/call.png', color: '#0156A4', url: 'tel:+918153929447' },
+        { name: 'Facebook', row: 2, col: 1, icon: '/logo/facebook.png', color: '#1877F2', url: 'https://facebook.com/' },
+        { name: 'LinkedIn', row: 2, col: 2, icon: '/logo/linkdin.png', color: '#0A66C2', url: 'https://www.linkedin.com/company/webingix/' },
+        { name: 'Email', row: 2, col: 3, icon: '/logo/email.png', color: '#DA483A', url: 'mailto:Webingix.dev@outlook.com' },
+        { name: 'WhatsApp', row: 3, col: 1, icon: '/logo/whatsapp.png', color: '#25D366', url: 'https://wa.me/918153929447' },
+        { name: 'Instagram', row: 3, col: 2, icon: '/logo/instagram.png', color: '#E1306C', url: 'https://www.instagram.com/webnginx.dev/' }
+    ];
+
+    React.useLayoutEffect(() => {
         const ctx = gsap.context(() => {
             const desktopChars = gsap.utils.toArray('.contact-main-heading .char');
             gsap.fromTo(desktopChars,
@@ -35,7 +90,8 @@ const Contact = ({ isContactPage = false }) => {
                     ease: "cubic-bezier(0.8, 0, 0.2, 1)",
                     scrollTrigger: {
                         trigger: '.contact-main-heading',
-                        start: 'top 85%'
+                        start: 'top 85%',
+                        toggleActions: 'play none none none'
                     }
                 }
             );
@@ -50,24 +106,25 @@ const Contact = ({ isContactPage = false }) => {
                     ease: "cubic-bezier(0.8, 0, 0.2, 1)",
                     scrollTrigger: {
                         trigger: '.contact-main-heading-mobile',
-                        start: 'top 88%'
+                        start: 'top 88%',
+                        toggleActions: 'play none none none'
                     }
                 }
             );
 
             const secondaryChars = gsap.utils.toArray('.contact-secondary-heading .letter-anim');
             gsap.fromTo(secondaryChars,
-                { y: 40, opacity: 0 },
+                { y: 80, opacity: 0 },
                 {
                     y: 0,
                     opacity: 1,
-                    duration: 0.6,
-                    stagger: 0.04,
+                    duration: 0.4,
+                    stagger: 0.012,
                     ease: "power3.out",
                     scrollTrigger: {
                         trigger: '.contact-secondary-heading',
-                        start: 'top 85%',
-                        toggleActions: 'play reverse play reverse'
+                        start: 'top 92%',
+                        toggleActions: 'play none none none'
                     }
                 }
             );
@@ -84,14 +141,23 @@ const Contact = ({ isContactPage = false }) => {
                         ease: "power4.out",
                         scrollTrigger: {
                             trigger: '.contact-heading-wrap',
-                            start: 'top 80%'
+                            start: 'top 80%',
+                            toggleActions: 'play none none none'
                         }
                     }
                 );
             }
         }, containerRef);
 
-        return () => ctx.revert();
+        const refreshAll = () => {
+            setTimeout(() => ScrollTrigger.refresh(), 200);
+        };
+
+        window.addEventListener('webingix:projects_data_updated', refreshAll);
+        return () => {
+            ctx.revert();
+            window.removeEventListener('webingix:projects_data_updated', refreshAll);
+        };
     }, []);
 
     const splitText = (text, wordClassName = 'text-[#F1F1F1]') => {
@@ -105,12 +171,16 @@ const Contact = ({ isContactPage = false }) => {
     };
 
     const splitAnimatedLetters = (text) => {
-        return text.split('').map((char, index) => (
-            <span key={index} className="inline-block overflow-hidden align-top text-[#F1F1F1]">
-                <span className="inline-block letter-anim">
-                    {char === ' ' ? '\u00A0' : char}
-                </span>
-            </span>
+        return text.split(' ').map((word, wIdx) => (
+            <div key={wIdx} className="word inline-block mr-[0.12em] overflow-hidden align-top text-[#F1F1F1] whitespace-nowrap">
+                {word.split('').map((char, cIdx) => (
+                    <span key={cIdx} className="inline-block overflow-hidden align-top">
+                        <span className="inline-block letter-anim">
+                            {char}
+                        </span>
+                    </span>
+                ))}
+            </div>
         ));
     };
     return (
@@ -118,7 +188,7 @@ const Contact = ({ isContactPage = false }) => {
             {/* Add Handwriting Font */}
             <style dangerouslySetInnerHTML={{
                 __html: `
-                @import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&family=Anton&display=swap');
+                @font-face { font-family: 'Caveat'; font-display: swap; }
                 .font-handwriting { font-family: 'Caveat', cursive; }
                 .font-anton { font-family: 'Anton', sans-serif; }
                 .form-input::placeholder { font-family: 'Caveat', cursive; opacity: 0.35; }
@@ -170,12 +240,12 @@ const Contact = ({ isContactPage = false }) => {
             {isContactPage && (
                 <div className="px-[6vw] md:px-[4.5vw] pt-[15vw] pb-[8vw] md:pb-[6vw] md:pt-[10vw]">
                     <div className="relative text-[#F1F1F1] contact-heading-wrap w-full max-w-[1500px] mx-auto">
-                        
+
                         {/* Desktop & Tablet */}
                         <div className="relative md:w-full hidden md:flex flex-col">
                             <div className="w-full flex justify-start pl-[6vw]">
                                 <h1 className="contact-main-heading font-anton text-[min(15vw,220px)] -tracking-[.02em] leading-[0.85] uppercase">
-                                    <span className="overflow-hidden block">{splitText("LET'S WORK")}</span>
+                                    <span className="overflow-hidden block whitespace-nowrap flex-nowrap">{splitText("LET'S WORK")}</span>
                                 </h1>
                             </div>
                             <div className="w-full flex justify-end pr-[4vw] relative md:mt-[1vw]">
@@ -190,7 +260,7 @@ const Contact = ({ isContactPage = false }) => {
                                         />
                                     </span>
                                     <h1 className="contact-main-heading font-anton text-[min(15vw,220px)] -tracking-[.02em] leading-[0.85] uppercase">
-                                        <span className="overflow-hidden block">{splitText("TOGETHER")}</span>
+                                        <span className="overflow-hidden block whitespace-nowrap flex-nowrap">{splitText("TOGETHER")}</span>
                                     </h1>
                                 </div>
                             </div>
@@ -200,7 +270,7 @@ const Contact = ({ isContactPage = false }) => {
                         <div className="relative md:hidden flex flex-col pt-[8vw]">
                             <div className="w-full flex justify-start pl-[2vw]">
                                 <h1 className="contact-main-heading-mobile font-anton text-[19vw] -tracking-[.02em] leading-[0.85] uppercase">
-                                    <span className="overflow-hidden block">{splitText("LET'S WORK")}</span>
+                                    <span className="overflow-hidden block whitespace-nowrap flex-nowrap">{splitText("LET'S WORK")}</span>
                                 </h1>
                             </div>
                             <div className="w-full flex justify-end pr-[2vw] relative mt-[8vw]">
@@ -214,7 +284,7 @@ const Contact = ({ isContactPage = false }) => {
                                         />
                                     </span>
                                     <h1 className="contact-main-heading-mobile font-anton text-[19vw] -tracking-[.02em] leading-[0.85] uppercase">
-                                        <span className="overflow-hidden block">{splitText("TOGETHER")}</span>
+                                        <span className="overflow-hidden block whitespace-nowrap flex-nowrap">{splitText("TOGETHER")}</span>
                                     </h1>
                                 </div>
                             </div>
@@ -233,67 +303,29 @@ const Contact = ({ isContactPage = false }) => {
                         </div>
 
                         <div className="pl-[4vw] md:pl-[6vw] mb-[12vw] md:mb-[6vw] mt-[6vw] md:mt-[4vw] contact-secondary-heading">
-                            <h2 className="font-anton text-[18vw] md:text-[min(16vw,100px)] uppercase tracking-[0.02em] text-[#F1F1F1] flex flex-col gap-0 reveal-text leading-[0.9]">
-                                <span className="flex overflow-hidden leading-[1]">{splitAnimatedLetters("LET'S GET")}</span>
-                                <span className="flex overflow-hidden leading-[1] pl-[28vw] md:pl-[8.5vw]">{splitAnimatedLetters("IN TOUCH")}</span>
+                            <h2 className="font-anton text-[18vw] md:text-[min(16vw,100px)] uppercase tracking-[0.02em] text-[#F1F1F1] flex flex-col gap-0 reveal-text leading-[0.9] whitespace-nowrap">
+                                <span className="flex overflow-hidden leading-[1] whitespace-nowrap flex-nowrap">{splitAnimatedLetters("LET'S GET")}</span>
+                                <span className="flex overflow-hidden leading-[1] pl-[28vw] md:pl-[8.5vw] whitespace-nowrap flex-nowrap">{splitAnimatedLetters("IN TOUCH")}</span>
                             </h2>
                         </div>
 
                         {/* Staggered Social Grid (3x3 Logic from Code) */}
                         <div id="socials" className="mt-[3vw] md:mt-[4vw] pl-[0vw] md:pl-[6vw]">
                             <div className="grid grid-cols-3 w-max mx-auto md:mx-0 translate-x-0 md:translate-x-0">
-                                {/* Row 1 */}
-                                <div className="col-start-2">
-                                    <SocialLink
-                                        href="https://x.com/"
-                                        hoverColor="#ffffff"
-                                        icon={<img src="/logo/x.png" alt="X" className="w-[40%] object-contain brightness-0 invert opacity-70 group-hover:brightness-100 group-hover:invert-0 group-hover:opacity-100 transition-all duration-500" />}
-                                    />
-                                </div>
-                                <div className="col-start-3">
-                                    <SocialLink
-                                        href="tel:+918153929447"
-                                        hoverColor="#0156A4"
-                                        icon={<img src="/logo/call.png" alt="Call" className="w-[40%] object-contain brightness-0 invert opacity-70 group-hover:brightness-100 group-hover:invert-0 group-hover:opacity-100 transition-all duration-500" />}
-                                    />
-                                </div>
-                                {/* Row 2 */}
-                                <div className="row-start-2">
-                                    <SocialLink
-                                        href="https://facebook.com/"
-                                        hoverColor="#1877F2"
-                                        icon={<img src="/logo/facebook.png" alt="Facebook" className="w-[40%] object-contain brightness-0 invert opacity-70 group-hover:brightness-100 group-hover:invert-0 group-hover:opacity-100 transition-all duration-500" />}
-                                    />
-                                </div>
-                                <div className="row-start-2">
-                                    <SocialLink
-                                        href="https://linkedin.com/"
-                                        hoverColor="#0A66C2"
-                                        icon={<img src="/logo/linkdin.png" alt="LinkedIn" className="w-[40%] object-contain brightness-0 invert opacity-70 group-hover:brightness-100 group-hover:invert-0 group-hover:opacity-100 transition-all duration-500" />}
-                                    />
-                                </div>
-                                <div className="row-start-2">
-                                    <SocialLink
-                                        href="mailto:contact@webingix.com"
-                                        hoverColor="#DA483A"
-                                        icon={<img src="/logo/email.png" alt="Email" className="w-[40%] object-contain brightness-0 invert opacity-70 group-hover:brightness-100 group-hover:invert-0 group-hover:opacity-100 transition-all duration-500" />}
-                                    />
-                                </div>
-                                {/* Row 3 */}
-                                <div className="row-start-3">
-                                    <SocialLink
-                                        href="https://wa.me/"
-                                        hoverColor="#25D366"
-                                        icon={<img src="/logo/whatsapp.png" alt="WhatsApp" className="w-[40%] object-contain brightness-0 invert opacity-70 group-hover:brightness-100 group-hover:invert-0 group-hover:opacity-100 transition-all duration-500" />}
-                                    />
-                                </div>
-                                <div className="row-start-3">
-                                    <SocialLink
-                                        href="https://instagram.com/"
-                                        hoverColor="#E1306C"
-                                        icon={<img src="/logo/instagram.png" alt="Instagram" className="w-[40%] object-contain brightness-0 invert opacity-70 group-hover:brightness-100 group-hover:invert-0 group-hover:opacity-100 transition-all duration-500" />}
-                                    />
-                                </div>
+                                {socialSlots.map((slot, idx) => {
+                                    const dbLink = socials.find(s => s.name.toLowerCase() === slot.name.toLowerCase());
+                                    const href = dbLink ? dbLink.url : slot.url;
+
+                                    return (
+                                        <div key={idx} className={`row-start-${slot.row} col-start-${slot.col}`}>
+                                            <SocialLink
+                                                href={href}
+                                                hoverColor={slot.color}
+                                                icon={<img src={slot.icon} alt={slot.name} className="w-[55%] object-contain brightness-0 invert opacity-70 group-hover:brightness-100 group-hover:invert-0 group-hover:opacity-100 transition-all duration-500" />}
+                                            />
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </div>
                     </div>
@@ -444,60 +476,60 @@ const Contact = ({ isContactPage = false }) => {
 
                                 <form className="hidden md:flex md:flex-col gap-[2.5vw]" onSubmit={handleSubmit}>
                                     <p className="font-display text-[min(1.5vw,26px)] leading-[1.4] text-white">
-                                    <span className="block font-bold mb-3">Hi Webingix team,</span>
+                                        <span className="block font-bold mb-3">Hi Webingix team,</span>
 
-                                    <span> I, </span>
-                                    <span className="inline-block relative">
-                                        <input required type="text" placeholder=" Your name here " value={name} onChange={(e) => setName(e.target.value)} className="form-input bg-transparent border-b border-white/25 focus:border-[#39ff14] outline-none px-2 min-w-[15vw] placeholder:text-white/25 transition-colors" />
-                                    </span>
-                                    <span> want help kicking off a project. You can reach me via </span>
-                                    <span className="inline-block relative">
-                                        <select value={contactMethod} onChange={(e) => setContactMethod(e.target.value)} className="form-input select-custom bg-transparent border-b border-white/25 focus:border-[#39ff14] outline-none pr-8 cursor-pointer transition-colors mx-2">
-                                            <option className="bg-[#1a1a1a]" value="Phone">Phone</option>
-                                            <option className="bg-[#1a1a1a]" value="Email">Email</option>
-                                        </select>
-                                    </span>
-                                    <span> &nbsp; at &nbsp; </span>
-                                    <span className="inline-block relative">
-                                        <input required type="tel" placeholder=" 8153929447 " value={phone} onChange={(e) => setPhone(e.target.value)} className="form-input bg-transparent border-b border-white/25 focus:border-[#39ff14] outline-none px-2 min-w-[20vw] placeholder:text-white/25 transition-colors" />
-                                    </span>
-
-                                    <br />
-                                    <span> My business or project is called </span>
-                                    <span className="inline-block relative">
-                                        <input required type="text" placeholder=" Business/project name " value={projectName} onChange={(e) => setProjectName(e.target.value)} className="form-input bg-transparent border-b border-white/25 focus:border-[#39ff14] outline-none px-2 min-w-[25vw] placeholder:text-white/25 transition-colors" />
-                                    </span>
-                                    <span>. I'm looking for </span>
-                                    <span className="inline-block relative">
-                                        <select value={projectType} onChange={(e) => setProjectType(e.target.value)} className="form-input select-custom bg-transparent border-b border-white/25 focus:border-[#39ff14] outline-none pr-8 cursor-pointer transition-colors mx-2">
-                                            <option className="bg-[#1a1a1a]" value="Website">Website</option>
-                                            <option className="bg-[#1a1a1a]" value="E-commerce">E-commerce</option>
-                                            <option className="bg-[#1a1a1a]" value="UI/UX">UI/UX Design</option>
-                                        </select>
-                                    </span>
-                                    <span> and I'm aiming to launch by </span>
-                                    <span className="inline-block relative">
-                                        <select value={timeline} onChange={(e) => setTimeline(e.target.value)} className="form-input select-custom bg-transparent border-b border-white/25 focus:border-[#39ff14] outline-none pr-8 cursor-pointer transition-colors mx-2">
-                                            <option className="bg-[#1a1a1a]" value="2 weeks">2 weeks</option>
-                                            <option className="bg-[#1a1a1a]" value="1-2 months">1-2 months</option>
-                                            <option className="bg-[#1a1a1a]" value="3+ months">3+ months</option>
-                                        </select>
-                                    </span>
-
-                                    <br />
-                                    <span> And here's more about what I have in mind </span>
-                                    <span className="inline-block relative">
-                                        <input required type="text" placeholder=" Anything else " value={extraDetails} onChange={(e) => setExtraDetails(e.target.value)} className="form-input bg-transparent border-b border-white/25 focus:border-[#39ff14] outline-none px-2 min-w-[35vw] placeholder:text-white/25 transition-colors" />
-                                    </span>
-                                    <span>. </span>
-
-                                    <br />
-                                    <span className="block mt-4 font-bold">
-                                        Cheers,
-                                        <span className={`block font-handwriting text-[1.4em] mt-1 translate-x-2 text-[#39ff14] min-h-[1.5em]`}>
-                                            {name}
+                                        <span> I, </span>
+                                        <span className="inline-block relative">
+                                            <input required type="text" placeholder=" Your name here " value={name} onChange={(e) => setName(e.target.value)} className="form-input bg-transparent border-b border-white/25 focus:border-[#39ff14] outline-none px-2 min-w-[15vw] placeholder:text-white/25 transition-colors" />
                                         </span>
-                                    </span>
+                                        <span> want help kicking off a project. You can reach me via </span>
+                                        <span className="inline-block relative">
+                                            <select value={contactMethod} onChange={(e) => setContactMethod(e.target.value)} className="form-input select-custom bg-transparent border-b border-white/25 focus:border-[#39ff14] outline-none pr-8 cursor-pointer transition-colors mx-2">
+                                                <option className="bg-[#1a1a1a]" value="Phone">Phone</option>
+                                                <option className="bg-[#1a1a1a]" value="Email">Email</option>
+                                            </select>
+                                        </span>
+                                        <span> &nbsp; at &nbsp; </span>
+                                        <span className="inline-block relative">
+                                            <input required type="tel" placeholder=" 8153929447 " value={phone} onChange={(e) => setPhone(e.target.value)} className="form-input bg-transparent border-b border-white/25 focus:border-[#39ff14] outline-none px-2 min-w-[20vw] placeholder:text-white/25 transition-colors" />
+                                        </span>
+
+                                        <br />
+                                        <span> My business or project is called </span>
+                                        <span className="inline-block relative">
+                                            <input required type="text" placeholder=" Business/project name " value={projectName} onChange={(e) => setProjectName(e.target.value)} className="form-input bg-transparent border-b border-white/25 focus:border-[#39ff14] outline-none px-2 min-w-[25vw] placeholder:text-white/25 transition-colors" />
+                                        </span>
+                                        <span>. I'm looking for </span>
+                                        <span className="inline-block relative">
+                                            <select value={projectType} onChange={(e) => setProjectType(e.target.value)} className="form-input select-custom bg-transparent border-b border-white/25 focus:border-[#39ff14] outline-none pr-8 cursor-pointer transition-colors mx-2">
+                                                <option className="bg-[#1a1a1a]" value="Website">Website</option>
+                                                <option className="bg-[#1a1a1a]" value="E-commerce">E-commerce</option>
+                                                <option className="bg-[#1a1a1a]" value="UI/UX">UI/UX Design</option>
+                                            </select>
+                                        </span>
+                                        <span> and I'm aiming to launch by </span>
+                                        <span className="inline-block relative">
+                                            <select value={timeline} onChange={(e) => setTimeline(e.target.value)} className="form-input select-custom bg-transparent border-b border-white/25 focus:border-[#39ff14] outline-none pr-8 cursor-pointer transition-colors mx-2">
+                                                <option className="bg-[#1a1a1a]" value="2 weeks">2 weeks</option>
+                                                <option className="bg-[#1a1a1a]" value="1-2 months">1-2 months</option>
+                                                <option className="bg-[#1a1a1a]" value="3+ months">3+ months</option>
+                                            </select>
+                                        </span>
+
+                                        <br />
+                                        <span> And here's more about what I have in mind </span>
+                                        <span className="inline-block relative">
+                                            <input required type="text" placeholder=" Anything else " value={extraDetails} onChange={(e) => setExtraDetails(e.target.value)} className="form-input bg-transparent border-b border-white/25 focus:border-[#39ff14] outline-none px-2 min-w-[35vw] placeholder:text-white/25 transition-colors" />
+                                        </span>
+                                        <span>. </span>
+
+                                        <br />
+                                        <span className="block mt-4 font-bold">
+                                            Cheers,
+                                            <span className={`block font-handwriting text-[1.4em] mt-1 translate-x-2 text-[#39ff14] min-h-[1.5em]`}>
+                                                {name}
+                                            </span>
+                                        </span>
                                     </p>
 
                                     <div className="flex justify-end mt-[4vw] md:mt-[3vw] md:mr-[4vw]">
@@ -536,7 +568,7 @@ const SocialLink = ({ href, icon, hoverColor }) => (
         href={href}
         target="_blank"
         rel="noopener noreferrer"
-        className="group bg-transparent hover:bg-white border-[.5px] border-[#5C5C5C] w-[20.5vw] h-[20.5vw] md:w-[7.5vw] md:h-[7.5vw] flex justify-center items-center relative transition-all duration-500 hover:z-20 -ml-[0.5px] -mt-[0.5px]"
+        className="group bg-[#0f0f0f] hover:bg-white border-[.5px] border-[#5C5C5C] w-[20.5vw] h-[20.5vw] md:w-[7.5vw] md:h-[7.5vw] flex justify-center items-center relative transition-all duration-500 hover:z-20 -ml-[0.5px] -mt-[0.5px]"
     >
         <span className="duration-500 transition-colors w-full h-full flex items-center justify-center p-2" style={{ '--hover-color': hoverColor }}>
             {React.cloneElement(icon, {
