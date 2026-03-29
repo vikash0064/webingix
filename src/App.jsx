@@ -28,12 +28,12 @@ function App() {
   const showFooter = location.pathname !== '/admin' && location.pathname !== '/contact' && !isPreloading;
 
   useEffect(() => {
-    // Prefetch ALL critical data in parallel
+    // Prefetch ALL critical data in parallel - PRIORITIZING TEAM FOR ABOUT PAGE
     const prefetchData = async () => {
       await Promise.allSettled([
-        queryClient.prefetchQuery({ queryKey:['projects'], queryFn: async () => (await fetch('/api/projects')).json() }),
-        queryClient.prefetchQuery({ queryKey:['team'], queryFn: async () => (await fetch('/api/team')).json() }),
-        queryClient.prefetchQuery({ queryKey:['socials'], queryFn: async () => (await fetch('/api/socials')).json() }),
+        queryClient.prefetchQuery({ queryKey:['projects'], queryFn: async () => (await fetch('/api/projects')).json(), staleTime: 1000 * 60 * 10 }),
+        queryClient.prefetchQuery({ queryKey:['team'], queryFn: async () => (await fetch('/api/team')).json(), staleTime: 1000 * 60 * 30 }),
+        queryClient.prefetchQuery({ queryKey:['socials'], queryFn: async () => (await fetch('/api/socials')).json(), staleTime: 1000 * 60 * 60 }),
       ]);
     };
     prefetchData();
@@ -100,7 +100,9 @@ function App() {
         <div className="mx-[10px] md:mx-0 bg-transparent min-h-screen md:min-h-0">
           {!isPreloading && (
             <Routes>
-              <Route path="/" element={<Home />} />
+              {/* PRIMARY LANDING SUCCESS: Swapping Home for AboutPage as your main entrance */}
+              <Route path="/" element={<AboutPage />} />
+              <Route path="/home" element={<Home />} />
               <Route path="/about" element={<AboutPage />} />
               <Route path="/services" element={<ServicesPage />} />
               <Route path="/projects" element={<ProjectsPage />} />

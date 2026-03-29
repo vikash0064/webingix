@@ -1,4 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useRef } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import Contact from './Contact';
@@ -11,16 +12,16 @@ const defaultMembers = [
     { id: 'RF07', name: 'Uday Rathore', title: 'Creative Director', tags: ['Art Director', 'Design Critique'], photo: '' },
     { id: 'RF16', name: 'Sushma Jois', title: 'Crafting pixels with Figma magic!', tags: ['UI/UX Designer', 'Figma', 'Photoshop', 'Illustrator', 'Xd'], photo: '' },
     { id: 'RF20', name: 'Vinayak Dev', title: 'I feel the need.. The need for code', tags: ['Back-end Developer', 'Laravel', 'PHP'], photo: '' },
-    { id: 'RF04', name: 'Geethesh Nair', title: 'Tailwind is better than bootstrap', tags: ['Front-end Developer', 'Tailwind CSS', 'JS', 'GSAP'], photo: '' },
-    { id: 'RF01', name: 'Koko', title: "I'm the director of happiness", tags: ['Cuteness Overload', 'Tail Wags', 'Zoomies', 'Barkitect'], photo: '' }
+    { id: 'RF04', name: 'Geethesh Nair', title: 'Front-end Developer', tags: ['React', 'Tailwind', 'GSAP'], photo: '' },
+    { id: 'RF01', name: 'Koko', title: "I'm the director of happiness", tags: ['Cuteness', 'Barkitect'], photo: '' }
 ];
 
 const Team = () => {
-    const [teamMembers, setTeamMembers] = useState([]);
-    const [clientLogos, setClientLogos] = useState([]);
-    const [galleryImages, setGalleryImages] = useState([]);
-    const [projects, setProjects] = useState([]);
-
+    // ELITE CLOUD SYNC: Accessing prefetched data instantly from the TanStack cache
+    const { data: team = [] } = useQuery({ queryKey: ['team'], queryFn: async () => (await fetch('/api/team')).json() });
+    const { data: logos = [] } = useQuery({ queryKey: ['logos'], queryFn: async () => (await fetch('/api/logos')).json() });
+    const { data: gallery = [] } = useQuery({ queryKey: ['gallery'], queryFn: async () => (await fetch('/api/gallery')).json() });
+    
     const normalizeMember = (member, idx = 0) => {
         const fallback = defaultMembers[idx % defaultMembers.length] || {};
         const name = (member.name || fallback.name || `Member ${idx + 1}`).toString();
@@ -29,14 +30,9 @@ const Team = () => {
 
         let tags = member.tags;
         if (typeof tags === 'string') {
-            tags = tags
-                .split(/[,|]/)
-                .map(t => t.trim())
-                .filter(Boolean);
+            tags = tags.split(/[,|]/).map(t => t.trim()).filter(Boolean);
         }
-        if (!Array.isArray(tags) || tags.length === 0) {
-            tags = fallback.tags || [];
-        }
+        if (!Array.isArray(tags) || tags.length === 0) tags = fallback.tags || [];
 
         return {
             _id: member._id || id,
@@ -48,35 +44,16 @@ const Team = () => {
         };
     };
 
-    const fetchData = async () => {
-        try {
-            const [lRes, tRes, gRes, pRes] = await Promise.all([
-                fetch('/api/logos'),
-                fetch('/api/team'),
-                fetch('/api/gallery'),
-                fetch('/api/projects')
-            ]);
-            if (lRes.ok) setClientLogos(await lRes.ok ? await lRes.json() : []);
-            if (tRes.ok) {
-                const rawTeam = await tRes.json();
-                const normalized = Array.isArray(rawTeam)
-                    ? rawTeam.map((m, i) => normalizeMember(m, i))
-                    : [];
-                setTeamMembers(normalized.length ? normalized : []);
-            }
-            if (gRes.ok) setGalleryImages(await gRes.ok ? await gRes.json() : []);
-            if (pRes.ok) setProjects(await pRes.ok ? await pRes.json() : []);
-        } catch (err) {
-            console.error('Failed to fetch data:', err);
-        }
-    };
+    const teamMembers = React.useMemo(() => {
+        return team.length ? team.map((m, i) => normalizeMember(m, i)) : [];
+    }, [team]);
 
-    useEffect(() => {
-        fetchData();
-        const handleUpdate = () => fetchData();
-        window.addEventListener('webingix:projects_data_updated', handleUpdate);
-        return () => window.removeEventListener('webingix:projects_data_updated', handleUpdate);
-    }, []);
+    const displayLogos = React.useMemo(() => {
+        const l = [...logos];
+        const minSlots = Math.max(6, Math.ceil(l.length / 6) * 6);
+        while (l.length < minSlots) l.push({ id: `placeholder-${l.length}`, url: null });
+        return l;
+    }, [logos]);
 
     const imageRef = useRef();
     const titleRef = useRef();
@@ -84,6 +61,7 @@ const Team = () => {
     const globeRef = useRef();
     const cameraRef = useRef();
     const popcornRef = useRef();
+    const containerRef = useRef();
 
     const splitText = (text) => {
         return text.split(' ').map((word, wIdx) => (
@@ -176,23 +154,6 @@ const Team = () => {
                     }
                 );
             }
-
-            if (popcornRef.current) {
-                const isMobile = window.innerWidth < 768;
-                gsap.fromTo(popcornRef.current,
-                    { width: 0, scale: 0, opacity: 0 },
-                    {
-                        width: isMobile ? "12vw" : "7vw",
-                        scale: 1,
-                        opacity: 1,
-                        marginLeft: isMobile ? "1vw" : "0.5vw",
-                        marginRight: isMobile ? "1vw" : "0.5vw",
-                        duration: 0.8,
-                        ease: "power3.out",
-                        scrollTrigger: { trigger: popcornRef.current, start: "top 85%", toggleActions: "play none none none" }
-                    }
-                );
-            }
         }, containerRef);
 
         window.scrollTo(0, 0);
@@ -206,14 +167,6 @@ const Team = () => {
 
         return () => ctx.revert();
     }, [teamMembers]);
-
-    const displayLogos = [...clientLogos];
-    const minSlots = Math.max(6, Math.ceil(displayLogos.length / 6) * 6);
-    while (displayLogos.length < minSlots) {
-        displayLogos.push({ id: `placeholder-${displayLogos.length}`, url: null });
-    }
-
-    const containerRef = useRef();
 
     return (
         <div ref={containerRef} className="bg-[#0f0f0f] text-[#F1F1F1] min-h-screen pt-32 selection:bg-white selection:text-black">
@@ -292,34 +245,32 @@ const Team = () => {
                             photo: ''
                         }]).map((member, idx) => (
                             <div key={member._id || idx} className={`border-r border-b border-[#D0D0D0] relative p-[3vw] md:p-[1.25vw] min-h-[340px] md:min-h-[400px] flex flex-col bg-transparent`}>
-                                    <>
-                                        <div className="flex justify-between items-start">
-                                            <div className="w-[45%] aspect-[3/4] overflow-hidden">
-                                                {member.photo ? (
-                                                    <img src={member.photo} alt={member.name} className="w-full h-full object-cover" />
-                                                ) : (
-                                                    <div className="w-full h-full bg-[#1A1A1A] flex items-center justify-center text-[10px] text-white/20 uppercase font-bold italic">No Photo</div>
-                                                )}
-                                            </div>
-                                            <p className="text-[14px] md:text-[16px] font-bold text-white tracking-tight">{member.id}</p>
-                                        </div>
+                                <div className="flex justify-between items-start">
+                                    <div className="w-[45%] aspect-[3/4] overflow-hidden">
+                                        {member.photo ? (
+                                            <img src={member.photo} alt={member.name} className="w-full h-full object-cover" />
+                                        ) : (
+                                            <div className="w-full h-full bg-[#1A1A1A] flex items-center justify-center text-[10px] text-white/20 uppercase font-bold italic">No Photo</div>
+                                        )}
+                                    </div>
+                                    <p className="text-[14px] md:text-[16px] font-bold text-white tracking-tight">{member.id}</p>
+                                </div>
 
-                                        <div className="mt-[12vw] md:mt-[2.5vw]">
-                                            <h3 className="text-[32px] md:text-[52px] font-display font-black uppercase tracking-tight leading-[0.9] text-white">
-                                                {member.name}
-                                            </h3>
-                                            <div className="text-[15px] md:text-[21px] text-white mt-[2vw] md:mt-[1vw] leading-tight font-medium opacity-90">
-                                                {member.title}
+                                <div className="mt-[12vw] md:mt-[2.5vw]">
+                                    <h3 className="text-[32px] md:text-[52px] font-display font-black uppercase tracking-tight leading-[0.9] text-white">
+                                        {member.name}
+                                    </h3>
+                                    <div className="text-[15px] md:text-[21px] text-white mt-[2vw] md:mt-[1vw] leading-tight font-medium opacity-90">
+                                        {member.title}
+                                    </div>
+                                    <div className="flex gap-[1.5vw] md:gap-[.25vw] flex-wrap mt-[6vw] md:mt-[4vw] pb-[.5vw]">
+                                        {member.tags?.map((tag, i) => (
+                                            <div key={i} className="rounded-full border-[.5px] border-[#F1F1F1] px-[2.5vw] md:px-[.6vw] py-[1vw] md:py-[.3vw] text-[11px] md:text-[13px] text-white hover:bg-white hover:text-black transition-all cursor-default uppercase font-bold tracking-tight">
+                                                {tag}
                                             </div>
-                                            <div className="flex gap-[1.5vw] md:gap-[.25vw] flex-wrap mt-[6vw] md:mt-[4vw] pb-[.5vw]">
-                                                {member.tags?.map((tag, i) => (
-                                                    <div key={i} className="rounded-full border-[.5px] border-[#F1F1F1] px-[2.5vw] md:px-[.6vw] py-[1vw] md:py-[.3vw] text-[11px] md:text-[13px] text-white hover:bg-white hover:text-black transition-all cursor-default uppercase font-bold tracking-tight">
-                                                        {tag}
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    </>
+                                        ))}
+                                    </div>
+                                </div>
                             </div>
                         ))}
                     </div>
@@ -341,13 +292,12 @@ const Team = () => {
                                 let src = i === 1 ? "/laptop.webp" : i === 5 ? "/code.png" : "/yo.png";
                                 return <div key={i} className="aspect-square flex items-center justify-center bg-transparent border border-[#5C5C5C] p-[25%]"><img src={src} className="w-full h-full object-contain transition-transform hover:scale-110" /></div>
                             }
-                            const photo = galleryImages[[0, 2, 3, 4, 7, 8].indexOf(i)];
+                            const photo = gallery[[0, 2, 3, 4, 7, 8].indexOf(i)];
                             return <div key={i} className="aspect-square flex items-center justify-center bg-[#2A2A2A] border border-[#5C5C5C] overflow-hidden">{photo ? <img src={photo.url} className="w-full h-full object-cover transition-transform hover:scale-110" /> : <span className="text-[10px] text-[#5C5C5C] font-bold uppercase italic tracking-widest">Awaiting Shot</span>}</div>
                         })}
                     </div>
                 </div>
             </section>
-
 
             <Contact />
         </div>

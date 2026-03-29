@@ -422,11 +422,16 @@ const server = http.createServer(async (req, res) => {
         return json(res, 200, { authenticated: isAuth }, corsHeaders);
     }
 
-    // Static Delivery
+    // Static Delivery & Catch-All for React Router
     if ((req.method === 'GET' || req.method === 'HEAD') && !pathname.startsWith('/api')) {
-        if (tryServeDistFile(res, pathname) || tryServeDistFile(res, '/')) return;
+        // First try to serve the specific file (assets, logos, etc.)
+        if (tryServeDistFile(res, pathname)) return;
+        
+        // If no file found, serve index.html for React Router to handle the path (SPA catch-all)
+        if (tryServeDistFile(res, '/')) return;
     }
 
+    // Still not found? 404
     json(res, 404, { error: 'Not found' }, corsHeaders);
 });
 
