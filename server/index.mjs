@@ -163,6 +163,7 @@ const ProjectSchema = new mongoose.Schema({
     image: String,
     desc: String,
     tags: [String],
+    link: String,
     order: { type: Number, default: 0 }
 });
 const Project = mongoose.model('Project', ProjectSchema);

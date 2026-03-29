@@ -185,13 +185,22 @@ const WeBuildBetter = () => {
                                         {project.title}
                                     </h3>
                                 </div>
-                                <span className="text-white/85 text-[2rem] leading-none mt-1">↗</span>
+                                {project.link ? (
+                                    <a href={project.link} target="_blank" rel="noopener noreferrer" className="text-white/85 text-[2rem] leading-none mt-1 hover:text-[#39FF14] transition-colors">↗</a>
+                                ) : (
+                                    <span className="text-white/85 text-[2rem] leading-none mt-1">↗</span>
+                                )}
                             </div>
 
                             <div className="mt-4 border border-white/45 p-[6px] bg-[#171717]">
                                 <div className="aspect-[1.06] overflow-hidden bg-black">
                                     <img src={project.image} alt={project.title} className="w-full h-full object-cover" />
                                 </div>
+                                {project.link && (
+                                    <a href={project.link} target="_blank" rel="noopener noreferrer" className="block text-[8px] font-black uppercase tracking-widest text-[#39FF14] mt-2 text-center hover:underline">
+                                        Visit Website
+                                    </a>
+                                )}
                             </div>
 
                             <div className="mt-5 space-y-5">
@@ -331,6 +340,16 @@ const WeBuildBetter = () => {
                                     <div className="w-full h-full border-[8px] border-white aspect-[4/3] overflow-hidden">
                                         <img src={project.image} alt={project.title} className="w-full h-full object-cover" />
                                     </div>
+                                    {project.link && (
+                                        <a 
+                                            href={project.link} 
+                                            target="_blank" 
+                                            rel="noopener noreferrer" 
+                                            className="absolute -bottom-[2.5vw] right-0 bg-[#39FF14] text-black px-[1vw] py-[0.4vw] text-[min(0.8vw,12px)] font-black uppercase tracking-widest hover:bg-white transition-colors pointer-events-auto"
+                                        >
+                                            Visit Live
+                                        </a>
+                                    )}
                                 </div>
                             </div>
                         </div>

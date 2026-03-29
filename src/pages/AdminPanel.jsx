@@ -67,7 +67,7 @@ const AdminPanel = ({ onLock }) => {
     const [newLogo, setNewLogo] = useState('');
     const [newMember, setNewMember] = useState({ id: '', name: '', title: '', tags: '', photo: '' });
     const [newGalleryImg, setNewGalleryImg] = useState('');
-    const [newProject, setNewProject] = useState({ id: '', title: '', clientMsg: '', ourMsg: '', time: '', image: '', desc: '', tags: '' });
+    const [newProject, setNewProject] = useState({ id: '', title: '', clientMsg: '', ourMsg: '', time: '', image: '', desc: '', tags: '', link: '' });
     const [newSocial, setNewSocial] = useState({ name: '', url: '' });
     const [showSuccess, setShowSuccess] = useState(false);
 
@@ -81,7 +81,7 @@ const AdminPanel = ({ onLock }) => {
         setNewLogo('');
         setNewMember({ id: '', name: '', title: '', tags: '', photo: '' });
         setNewGalleryImg('');
-        setNewProject({ id: '', title: '', clientMsg: '', ourMsg: '', time: '', image: '', desc: '', tags: '' });
+        setNewProject({ id: '', title: '', clientMsg: '', ourMsg: '', time: '', image: '', desc: '', tags: '', link: '' });
         setNewSocial({ name: '', url: '' });
     };
 
@@ -159,7 +159,7 @@ const AdminPanel = ({ onLock }) => {
     const startEditingLogo = (logo) => { setActiveSection('brands'); setEditingId(logo._id); setNewLogo(logo.url); };
     const startEditingMember = (member) => { setActiveSection('team'); setEditingId(member._id); const safeTags = Array.isArray(member.tags) ? member.tags.join(', ') : (member.tags || ''); setNewMember({ ...member, tags: safeTags }); };
     const startEditingGallery = (img) => { setActiveSection('gallery'); setEditingId(img._id); setNewGalleryImg(img.url); };
-    const startEditingProject = (p) => { setActiveSection('projects'); setEditingId(p._id); setNewProject({ ...p, tags: Array.isArray(p.tags) ? p.tags.join(', ') : (p.tags || '') }); };
+    const startEditingProject = (p) => { setActiveSection('projects'); setEditingId(p._id); setNewProject({ ...p, tags: Array.isArray(p.tags) ? p.tags.join(', ') : (p.tags || ''), link: p.link || '' }); };
     const startEditingSocial = (s) => { setActiveSection('socials'); setEditingId(s._id); setNewSocial({ name: s.name, url: s.url }); };
 
     const handleDelete = async (section, id) => {
@@ -283,6 +283,7 @@ const AdminPanel = ({ onLock }) => {
                         {activeSection === 'projects' && (
                             <form onSubmit={handleSaveProject} className="space-y-4">
                                 <input type="text" placeholder="Project Name" className="w-full bg-black border border-[#5C5C5C] p-3 text-xs outline-none" value={newProject.title} onChange={e => setNewProject({ ...newProject, title: e.target.value })} />
++                               <input type="text" placeholder="Project URL (https://...)" className="w-full bg-black border border-[#5C5C5C] p-3 text-xs outline-none" value={newProject.link} onChange={e => setNewProject({ ...newProject, link: e.target.value })} />
                                 <input type="text" placeholder="Tags (tag1, tag2)" className="w-full bg-black border border-[#5C5C5C] p-3 text-xs outline-none" value={newProject.tags} onChange={e => setNewProject({ ...newProject, tags: e.target.value })} />
                                 <textarea placeholder="Client's Requirements" className="w-full bg-black border border-[#5C5C5C] p-3 text-xs outline-none h-24" value={newProject.clientMsg} onChange={e => setNewProject({ ...newProject, clientMsg: e.target.value })} />
                                 <textarea placeholder="Our Response" className="w-full bg-black border border-[#5C5C5C] p-3 text-xs outline-none h-24" value={newProject.ourMsg} onChange={e => setNewProject({ ...newProject, ourMsg: e.target.value })} />
