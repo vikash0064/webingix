@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "start": "node server/index.mjs",
+    "server": "node server/index.mjs",
     "build": "vite build",
     "postinstall": "npm run build",
     "lint": "eslint .",
