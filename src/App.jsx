@@ -13,59 +13,90 @@ import ProjectsPage from './pages/ProjectsPage';
 import ContactPage from './pages/ContactPage';
 import AdminAccessPage from './pages/AdminAccessPage';
 import Preloader from './components/Preloader';
+import { useQueryClient } from '@tanstack/react-query'
+import { AnimatePresence } from 'framer-motion';
 
 gsap.registerPlugin(ScrollTrigger);
 
 function App() {
   const location = useLocation();
+  const [showPreloader, setShowPreloader] = React.useState(true);
   const [isPreloading, setIsPreloading] = React.useState(true);
+  const queryClient = useQueryClient();
   
   const showHeader = location.pathname !== '/admin' && !isPreloading;
   const showFooter = location.pathname !== '/admin' && location.pathname !== '/contact' && !isPreloading;
 
   useEffect(() => {
+    // Prefetch ALL critical data in parallel
+    const prefetchData = async () => {
+      await Promise.allSettled([
+        queryClient.prefetchQuery({ queryKey:['projects'], queryFn: async () => (await fetch('/api/projects')).json() }),
+        queryClient.prefetchQuery({ queryKey:['team'], queryFn: async () => (await fetch('/api/team')).json() }),
+        queryClient.prefetchQuery({ queryKey:['socials'], queryFn: async () => (await fetch('/api/socials')).json() }),
+      ]);
+    };
+    prefetchData();
+  }, [queryClient]);
+
+  useEffect(() => {
     if (isPreloading) return;
 
-    const locomotiveScroll = new LocomotiveScroll();
-    window.scrollTo(0, 0);
+    let locomotiveScroll;
+    const ctx = gsap.context(() => {});
 
-    const ctx = gsap.context(() => {
-      const revealElements = gsap.utils.toArray('.reveal');
-      revealElements.forEach((el) => {
-        gsap.fromTo(el,
-          { opacity: 0, y: 50 },
-          {
-            opacity: 1,
-            y: 0,
-            duration: 1,
-            ease: "power3.out",
-            scrollTrigger: {
-              trigger: el,
-              start: "top 85%",
-              end: "bottom 15%",
-              toggleActions: "play none none none",
+    // Ensure DOM is fully rendered after preloader has exited
+    const timer = setTimeout(() => {
+      locomotiveScroll = new LocomotiveScroll();
+      window.scrollTo(0, 0);
+
+      ctx.add(() => {
+        const revealElements = gsap.utils.toArray('.reveal');
+        revealElements.forEach((el) => {
+          gsap.fromTo(el,
+            { opacity: 0, y: 50 },
+            {
+              opacity: 1,
+              y: 0,
+              duration: 1,
+              ease: "power3.out",
+              scrollTrigger: {
+                trigger: el,
+                start: "top 85%",
+                end: "bottom 15%",
+                toggleActions: "play none none none",
+              }
             }
-          }
-        );
+          );
+        });
       });
-    });
 
-    setTimeout(() => { ScrollTrigger.refresh(); }, 100);
+      setTimeout(() => { ScrollTrigger.refresh(); }, 500);
+    }, 150);
 
     return () => {
-      locomotiveScroll.destroy();
+      clearTimeout(timer);
+      if (locomotiveScroll) locomotiveScroll.destroy();
       ctx.revert();
     };
   }, [location.pathname, isPreloading]);
 
   return (
-    <div className="min-h-screen bg-[#151515] text-white font-sans relative" style={{ fontFamily: "'Inter', sans-serif" }}>
-      <Preloader completion={() => {
-        // Delay mounting the home page slightly to allow the curtain to clear
-        setTimeout(() => setIsPreloading(false), 500);
-      }} />
+    <div className="min-h-screen bg-[#151515] text-white font-sans relative overflow-x-hidden" style={{ fontFamily: "'Inter', sans-serif" }}>
+      <AnimatePresence>
+        {showPreloader && (
+          <Preloader onReady={() => {
+            setShowPreloader(false);
+            // Wait for preloader slide animation (0.9s) before mounting content
+            setTimeout(() => {
+              setIsPreloading(false);
+            }, 900);
+          }} />
+        )}
+      </AnimatePresence>
+
       {showHeader && <Header />}
-      <main className={`relative z-10 w-full overflow-x-hidden ${isPreloading ? 'opacity-0' : 'opacity-100 transition-opacity duration-1000'}`}>
+      <main className={`relative z-10 w-full ${isPreloading ? 'h-screen overflow-hidden opacity-0' : 'opacity-100 transition-opacity duration-1000'}`}>
         <div className="mx-[10px] md:mx-0 bg-transparent min-h-screen md:min-h-0">
           {!isPreloading && (
             <Routes>

@@ -54,36 +54,12 @@ const renderCorner = (type) => {
     }
 };
 
+import { useProjects } from '../hooks/useProjects';
+
 const WeBuildBetter = () => {
     const containerRef = useRef();
     const headingRef = useRef(null);
-    const [projects, setProjects] = React.useState(staticProjects);
-
-    const fetchProjects = async () => {
-        try {
-            const response = await fetch('/api/projects');
-            if (response.ok) {
-                const data = await response.json();
-                if (data && data.length > 0) {
-                    setProjects(data);
-                    // Persist for offline/fast load
-                    localStorage.setItem('projects_data', JSON.stringify(data));
-                }
-            }
-        } catch (err) {
-            console.error('Failed to fetch projects:', err);
-            // Fallback to localStorage if available
-            const saved = localStorage.getItem('projects_data');
-            if (saved) setProjects(JSON.parse(saved));
-        }
-    };
-
-    React.useEffect(() => {
-        fetchProjects();
-        // Listen for updates from Admin Panel
-        window.addEventListener('webingix:projects_data_updated', fetchProjects);
-        return () => window.removeEventListener('webingix:projects_data_updated', fetchProjects);
-    }, []);
+    const { data: projects = staticProjects, isLoading } = useProjects();
 
     useLayoutEffect(() => {
         const ctx = gsap.context(() => {

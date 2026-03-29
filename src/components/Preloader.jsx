@@ -1,88 +1,74 @@
-import React, { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useEffect } from 'react';
+import { motion } from 'framer-motion';
 
-const Preloader = ({ completion }) => {
-    const [isVisible, setIsVisible] = useState(true);
-
+const Preloader = ({ onReady }) => {
     useEffect(() => {
-        // Minimum time for the loader to show (ArtWorks style)
+        // High-end timing for the multi-phrase reveal
         const timer = setTimeout(() => {
-            setIsVisible(false);
-            if (completion) completion();
-        }, 3200);
+            if (onReady) onReady();
+        }, 4000); // Slightly longer to allow both brand and description to breathe
 
         return () => clearTimeout(timer);
-    }, [completion]);
+    }, [onReady]);
+
+    const word = "WEBINGIX";
+    const subText = "Web & App Development";
 
     return (
-        <AnimatePresence>
-            {isVisible && (
-                <motion.div
-                    initial={{ opacity: 1 }}
-                    exit={{ 
-                        y: '-100%',
-                        transition: { duration: 0.8, ease: [0.76, 0, 0.24, 1], delay: 0.2 } 
-                    }}
-                    className="fixed inset-0 z-[9999] bg-[#FFFFFF] flex items-center justify-center overflow-hidden"
-                >
-                    <div className="relative flex flex-col items-center">
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.8, y: 20 }}
-                            animate={{ 
-                                opacity: 1, 
-                                scale: 1, 
-                                y: 0,
-                                transition: { duration: 0.8, ease: "easeOut" }
-                            }}
-                            className="flex flex-col items-center"
-                        >
-                            {/* The Branded Text with Letter Stagger */}
-                            <motion.h1 
-                                className="text-black font-['Arial_Black',_sans-serif] font-black text-[clamp(2.5rem,8vw,6rem)] tracking-[-0.05em] leading-none text-center px-6"
+        <motion.div
+            initial={{ y: 0 }}
+            exit={{ 
+                y: '-100%', 
+                transition: { duration: 1, ease: [0.76, 0, 0.24, 1] } 
+            }}
+            className="fixed inset-0 z-[9999] bg-[#FFFFFF] flex items-center justify-center overflow-hidden pointer-events-auto"
+        >
+            <div className="relative flex flex-col items-center">
+                {/* Phase 1: Brand Name (Smaller, Bold Inter) */}
+                <div className="overflow-hidden py-2">
+                    <div className="flex">
+                        {word.split("").map((letter, index) => (
+                            <motion.span
+                                key={index}
+                                initial={{ y: "110%" }}
+                                animate={{ y: 0 }}
+                                transition={{ 
+                                    duration: 0.8, 
+                                    delay: 0.1 * index, 
+                                    ease: [0.16, 1, 0.3, 1] 
+                                }}
+                                className="inline-block text-black font-['Inter'] font-black text-[clamp(2rem,6.5vw,4.5rem)] tracking-[-0.04em] leading-tight"
                             >
-                                {"WEBINGIX".split("").map((letter, index) => (
-                                    <motion.span
-                                        key={index}
-                                        initial={{ opacity: 0, y: 30 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{ 
-                                            duration: 0.6, 
-                                            delay: 0.1 * index, 
-                                            ease: [0.215, 0.61, 0.355, 1] 
-                                        }}
-                                        className="inline-block"
-                                    >
-                                        {letter}
-                                    </motion.span>
-                                ))}
-                            </motion.h1>
-                            
-                            {/* Subtle line reveal */}
-                            <motion.div 
-                                initial={{ scaleX: 0 }}
-                                animate={{ scaleX: 1 }}
-                                transition={{ duration: 1, delay: 1, ease: "easeInOut" }}
-                                className="h-[3px] bg-black mt-2 w-full origin-left"
-                            />
-                        </motion.div>
-
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 0.4 }}
-                            transition={{ delay: 1.2 }}
-                            className="absolute -bottom-24 text-black/40 text-[10px] uppercase font-bold tracking-[0.5em]"
-                        >
-                            Establishing Connectivity
-                        </motion.div>
+                                {letter}
+                            </motion.span>
+                        ))}
                     </div>
+                </div>
 
-                    {/* Background Subtle Grid (Optional Premium Touch) */}
-                    <div className="absolute inset-0 opacity-[0.03] pointer-events-none" 
-                         style={{ backgroundImage: `radial-gradient(#000 1px, transparent 1px)`, backgroundSize: '40px 40px' }} 
-                    />
-                </motion.div>
-            )}
-        </AnimatePresence>
+                {/* Phase 2: Description (Web & App Development) */}
+                <div className="h-[2px] bg-black/10 w-[80%] my-3" />
+                
+                <div className="overflow-hidden h-6 mt-1 flex items-center">
+                    <motion.p
+                        initial={{ opacity: 0, y: 15 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ 
+                            duration: 0.8, 
+                            delay: 1.6, // Fire after WEBINGIX is complete
+                            ease: "easeOut"
+                        }}
+                        className="text-black/50 text-[10px] md:text-[13px] uppercase font-['Urbanist'] font-black tracking-[0.5em] whitespace-nowrap"
+                    >
+                        {subText}
+                    </motion.p>
+                </div>
+            </div>
+
+            {/* Subtle Grid Accent */}
+            <div className="absolute inset-0 opacity-[0.02] pointer-events-none" 
+                 style={{ backgroundImage: `radial-gradient(#000 1px, transparent 1px)`, backgroundSize: '60px 60px' }} 
+            />
+        </motion.div>
     );
 };
 

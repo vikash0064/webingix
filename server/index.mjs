@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import mongoose from 'mongoose';
+import zlib from 'node:zlib';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -62,7 +63,13 @@ const SESSION_TTL_MS = 1000 * 60 * 60 * 12;
 async function connectDB() {
     try {
         await mongoose.connect(MONGO_URI);
-        console.log('[admin-server] MongoDB connected at:', MONGO_URI);
+        console.log('[admin-server] MongoDB connected');
+        
+        // Ensure indices for hyper-fast lookups
+        await Project.collection.createIndex({ order: 1 });
+        await Member.collection.createIndex({ order: 1 });
+        await Submission.collection.createIndex({ timestamp: -1 });
+
         await seedProjects();
         await seedSocials();
     } catch (err) {
@@ -209,8 +216,29 @@ const tryServeDistFile = (res, pathname) => {
 };
 
 const json = (res, statusCode, payload, extraHeaders = {}) => {
-    res.writeHead(statusCode, { 'Content-Type': 'application/json', ...extraHeaders });
-    res.end(JSON.stringify(payload));
+    const body = JSON.stringify(payload);
+    const acceptEncoding = (res.req && res.req.headers) ? (res.req.headers['accept-encoding'] || '') : '';
+    
+    const headers = { 
+        'Content-Type': 'application/json', 
+        ...extraHeaders,
+        'Vary': 'Accept-Encoding'
+    };
+
+    if (acceptEncoding.includes('gzip')) {
+        zlib.gzip(body, (err, compressed) => {
+            if (err) {
+                res.writeHead(statusCode, headers);
+                res.end(body);
+            } else {
+                res.writeHead(statusCode, { ...headers, 'Content-Encoding': 'gzip' });
+                res.end(compressed);
+            }
+        });
+    } else {
+        res.writeHead(statusCode, headers);
+        res.end(body);
+    }
 };
 
 const isValidSessionToken = (token) => {

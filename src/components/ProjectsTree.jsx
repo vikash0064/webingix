@@ -35,51 +35,14 @@ const fallbackProjects = [
     }
 ];
 
+import { useProjects } from '../hooks/useProjects';
+
 const ProjectsTree = () => {
     const sectionRef = useRef();
     const headingImgRef = useRef();
     const [activeProjectIndex, setActiveProjectIndex] = useState(0);
 
-    // Projects will be loaded dynamically (e.g., from admin panel or API)
-    const [projects, setProjects] = useState([]);
-
-    const fetchProjects = async () => {
-        try {
-            const res = await fetch('/api/projects');
-            if (res.ok) {
-                const data = await res.json();
-                if (data.length > 0) setProjects(data);
-                setTimeout(() => ScrollTrigger.refresh(), 150);
-                return;
-            }
-        } catch (error) {
-            console.error('Failed to load projects from API', error);
-        }
-
-        // Fallback to locally cached projects if API is unreachable
-        try {
-            const cached = JSON.parse(localStorage.getItem('projects_data') || '[]');
-            if (Array.isArray(cached) && cached.length > 0) {
-                setProjects(cached);
-                setTimeout(() => ScrollTrigger.refresh(), 150);
-            }
-        } catch (e) {
-            console.warn('No cached projects available');
-        }
-    };
-
-    useEffect(() => {
-        fetchProjects();
-        const handleUpdate = () => fetchProjects();
-        window.addEventListener('webingix:projects_data_updated', handleUpdate);
-        window.addEventListener('storage', (e) => {
-            if (e.key === 'webingix_cms_last_sync') handleUpdate();
-        });
-        return () => {
-            window.removeEventListener('webingix:projects_data_updated', handleUpdate);
-            window.removeEventListener('storage', handleUpdate);
-        };
-    }, []);
+    const { data: projects = [], isLoading } = useProjects();
 
     const displayProjects = projects.length > 0 ? projects : fallbackProjects;
     const activeProject = displayProjects[activeProjectIndex] || displayProjects[0];
