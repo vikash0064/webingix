@@ -118,7 +118,7 @@ const Technologies = () => {
                                     <div className="w-[54%] h-[54%] flex items-center justify-center">
                                         <img 
                                             src={item.icon} 
-                                            alt={item.name} 
+                                            alt={`${item.name} Development Expertise - Webingix Digital Agency`} 
                                             className={`w-full h-full object-contain transition-all duration-700 group-hover:scale-110 group-hover:rotate-[5deg] ${item.imageClass || ''}`} 
                                         />
                                     </div>

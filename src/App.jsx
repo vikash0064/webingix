@@ -12,6 +12,7 @@ import ServicesPage from './pages/ServicesPage';
 import ProjectsPage from './pages/ProjectsPage';
 import ContactPage from './pages/ContactPage';
 import AdminAccessPage from './pages/AdminAccessPage';
+import SEO from './components/SEO';
 import Preloader from './components/Preloader';
 import { useQueryClient } from '@tanstack/react-query'
 import { AnimatePresence } from 'framer-motion';
@@ -110,6 +111,7 @@ function App() {
 
   return (
     <div className="min-h-screen bg-[#151515] text-white font-sans relative overflow-x-hidden" style={{ fontFamily: "'Inter', sans-serif" }}>
+      <SEO />
       <AnimatePresence>
         {showPreloader && (
           <Preloader onReady={() => {

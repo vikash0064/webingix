@@ -86,7 +86,7 @@ const Hero = () => {
                             <div className="relative block pl-[10.2vw] mt-1 shrink-0 h-[1em]">
                                 <img
                                     src="/laptop.webp"
-                                    alt="Laptop"
+                                    alt="Creative Tech Visualization - Webingix"
                                     className="absolute left-0 bottom-[8%] w-[20vw] max-w-[72px] h-auto grayscale brightness-125"
                                 />
                                 <TextFlip
@@ -143,55 +143,49 @@ const Hero = () => {
             <div className="relative z-10 px-8 md:px-20 max-w-[1800px] w-full mx-auto hidden md:grid md:grid-cols-12 gap-10 items-center">
                 <div className="md:col-span-8 flex flex-col items-start w-full -ml-4 -translate-y-10">
                     <div ref={titleRef} className="w-full flex flex-col">
-                        {heroLines.map((line, index) => (
-                            <div key={index} className="flex items-center gap-[0.8vw] mb-[0.1vw]">
-                                {index === 1 && (
-                                    <motion.div
-                                        initial={{ width: 0 }}
-                                        animate={{ width: "10vw" }}
-                                        transition={{ ease: [0.76, 0, 0.24, 1], duration: 1.2, delay: 0.5 }}
-                                        className="relative h-[5.5vw] -mt-[1.6vw] overflow-hidden rounded-xl bg-white/5 flex-shrink-0"
-                                    >
-                                        <img src="/eye.png" alt="Feature" className="w-full h-full object-cover grayscale opacity-90 brightness-110" />
-                                    </motion.div>
-                                )}
-                                <h1 className="uppercase text-[clamp(2.5rem,7.5vw,10rem)] font-display text-white leading-[0.88] tracking-tighter">
-                                    {index === 0 ? (
-                                        <div className="flex items-center">
-                                            <span>WE ARE A TEAM&nbsp;</span>
-                                            <div className="relative">
-                                                <AnimatePresence>
-                                                    {showLaptop && (
-                                                        <motion.div
-                                                            drag dragMomentum={false}
-                                                            initial={{ opacity: 0, scale: 0.5, rotate: 0, y: 10 }}
-                                                            animate={{ opacity: 1, scale: 1, rotate: 0, y: -45, x: 10 }}
-                                                            className="absolute z-[100] cursor-grab active:cursor-grabbing pointer-events-auto"
-                                                        >
-                                                            <img src="/laptop.webp" alt="Laptop" className="w-[5vw] h-auto grayscale brightness-125 select-none pointer-events-none" />
-                                                        </motion.div>
-                                                    )}
-                                                </AnimatePresence>
-                                                <span>OF</span>
-                                            </div>
-                                        </div>
-                                    ) : index === 1 ? (
-                                        <TextFlip
-                                            words={["DEVELOPERS", { text: "DESIGNERS", className: "text-[#39FF14]" }, "DEVELOPERS"]}
-                                            className="uppercase font-display text-white leading-[0.88] tracking-tighter"
-                                        />
-                                    ) : (
-                                        <div className="flex items-center gap-x-[0.8vw] -mt-[0.5vw]">
-                                            <span>WHO BUILD</span>
-                                            <TextFlip
-                                                words={["WEBSITES", { text: "APPS", className: "text-[#39FF14]" }, "WEBSITES"]}
-                                                className="uppercase font-display text-white leading-[0.88] tracking-tighter"
-                                            />
-                                        </div>
-                                    )}
-                                </h1>
+                        <h1 className="uppercase text-[clamp(2.5rem,7.5vw,10rem)] font-display text-white leading-[0.88] tracking-tighter">
+                            <div className="flex items-center gap-[0.8vw] mb-[0.1vw]">
+                                <div className="flex items-center">
+                                    <span>WE ARE A TEAM&nbsp;</span>
+                                    <div className="relative">
+                                        <AnimatePresence>
+                                            {showLaptop && (
+                                                <motion.div
+                                                    drag dragMomentum={false}
+                                                    initial={{ opacity: 0, scale: 0.5, rotate: 0, y: 10 }}
+                                                    animate={{ opacity: 1, scale: 1, rotate: 0, y: -45, x: 10 }}
+                                                    className="absolute z-[100] cursor-grab active:cursor-grabbing pointer-events-auto"
+                                                >
+                                                    <img src="/laptop.webp" alt="Premium Laptop Visualization - Webingix Digital Agency" className="w-[5vw] h-auto grayscale brightness-125 select-none pointer-events-none" />
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
+                                        <span>OF</span>
+                                    </div>
+                                </div>
                             </div>
-                        ))}
+                            <div className="flex items-center gap-[0.8vw] mb-[0.1vw]">
+                                <motion.div
+                                    initial={{ width: 0 }}
+                                    animate={{ width: "10vw" }}
+                                    transition={{ ease: [0.76, 0, 0.24, 1], duration: 1.2, delay: 0.5 }}
+                                    className="relative h-[5.5vw] -mt-[1.6vw] overflow-hidden rounded-xl bg-white/5 flex-shrink-0"
+                                >
+                                    <img src="/eye.png" alt="Creative Vision Icon - Webingix Studio" className="w-full h-full object-cover grayscale opacity-90 brightness-110" />
+                                </motion.div>
+                                <TextFlip
+                                    words={["DEVELOPERS", { text: "DESIGNERS", className: "text-[#39FF14]" }, "DEVELOPERS"]}
+                                    className="uppercase font-display text-white leading-[0.88] tracking-tighter"
+                                />
+                            </div>
+                            <div className="flex items-center gap-x-[0.8vw] -mt-[0.5vw]">
+                                <span>WHO BUILD</span>
+                                <TextFlip
+                                    words={["WEBSITES", { text: "APPS", className: "text-[#39FF14]" }, "WEBSITES"]}
+                                    className="uppercase font-display text-white leading-[0.88] tracking-tighter"
+                                />
+                            </div>
+                        </h1>
                     </div>
 
                     <div ref={btnRef} className="mt-8 flex items-center">
