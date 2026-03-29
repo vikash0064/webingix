@@ -12,15 +12,20 @@ import ServicesPage from './pages/ServicesPage';
 import ProjectsPage from './pages/ProjectsPage';
 import ContactPage from './pages/ContactPage';
 import AdminAccessPage from './pages/AdminAccessPage';
+import Preloader from './components/Preloader';
 
 gsap.registerPlugin(ScrollTrigger);
 
 function App() {
   const location = useLocation();
-  const showHeader = location.pathname !== '/admin';
-  const showFooter = location.pathname !== '/admin' && location.pathname !== '/contact';
+  const [isPreloading, setIsPreloading] = React.useState(true);
+  
+  const showHeader = location.pathname !== '/admin' && !isPreloading;
+  const showFooter = location.pathname !== '/admin' && location.pathname !== '/contact' && !isPreloading;
 
   useEffect(() => {
+    if (isPreloading) return;
+
     const locomotiveScroll = new LocomotiveScroll();
     window.scrollTo(0, 0);
 
@@ -51,21 +56,27 @@ function App() {
       locomotiveScroll.destroy();
       ctx.revert();
     };
-  }, [location.pathname]);
+  }, [location.pathname, isPreloading]);
 
   return (
     <div className="min-h-screen bg-[#151515] text-white font-sans relative" style={{ fontFamily: "'Inter', sans-serif" }}>
+      <Preloader completion={() => {
+        // Delay mounting the home page slightly to allow the curtain to clear
+        setTimeout(() => setIsPreloading(false), 500);
+      }} />
       {showHeader && <Header />}
-      <main className="relative z-10 w-full">
+      <main className={`relative z-10 w-full overflow-x-hidden ${isPreloading ? 'opacity-0' : 'opacity-100 transition-opacity duration-1000'}`}>
         <div className="mx-[10px] md:mx-0 bg-transparent min-h-screen md:min-h-0">
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/about" element={<AboutPage />} />
-            <Route path="/services" element={<ServicesPage />} />
-            <Route path="/projects" element={<ProjectsPage />} />
-            <Route path="/contact" element={<ContactPage />} />
-            <Route path="/admin" element={<AdminAccessPage />} />
-          </Routes>
+          {!isPreloading && (
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/about" element={<AboutPage />} />
+              <Route path="/services" element={<ServicesPage />} />
+              <Route path="/projects" element={<ProjectsPage />} />
+              <Route path="/contact" element={<ContactPage />} />
+              <Route path="/admin" element={<AdminAccessPage />} />
+            </Routes>
+          )}
         </div>
       </main>
       {showFooter && (
