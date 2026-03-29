@@ -9,6 +9,7 @@ const AdminPanel = ({ onLock }) => {
     const [activeSection, setActiveSection] = useState('leads');
     const [submissions, setSubmissions] = useState([]);
     const [isLoadingSubmissions, setIsLoadingSubmissions] = useState(false);
+    const [isUploading, setIsUploading] = useState(false);
     const [editingId, setEditingId] = useState(null);
 
     const [logos, setLogos] = useState([]);
@@ -88,71 +89,86 @@ const AdminPanel = ({ onLock }) => {
     const handleSaveLogo = async (e) => {
         e.preventDefault();
         if (newLogo) {
-            const url = editingId ? `/api/admin/logos/${editingId}` : '/api/admin/logos';
-            const method = editingId ? 'PUT' : 'POST';
-            const res = await fetch(url, {
-                method, headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ url: newLogo, order: logos.length }), credentials: 'include'
-            });
-            if (res.ok) { await fetchData(); clearForm(); triggerSuccess(); }
+            setIsUploading(true);
+            try {
+                const url = editingId ? `/api/admin/logos/${editingId}` : '/api/admin/logos';
+                const method = editingId ? 'PUT' : 'POST';
+                const res = await fetch(url, {
+                    method, headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: newLogo, order: logos.length }), credentials: 'include'
+                });
+                if (res.ok) { await fetchData(); clearForm(); triggerSuccess(); }
+            } finally { setIsUploading(false); }
         }
     };
 
     const handleSaveMember = async (e) => {
         e.preventDefault();
         if (newMember.name && newMember.id) {
-            const memberData = { ...newMember, tags: Array.isArray(newMember.tags) ? newMember.tags : newMember.tags.split(',').map(t => t.trim()) };
-            const url = editingId ? `/api/admin/team/${editingId}` : '/api/admin/team';
-            const method = editingId ? 'PUT' : 'POST';
-            const res = await fetch(url, {
-                method, headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ...memberData, order: team.length }), credentials: 'include'
-            });
-            if (res.ok) { await fetchData(); clearForm(); triggerSuccess(); }
+            setIsUploading(true);
+            try {
+                const memberData = { ...newMember, tags: Array.isArray(newMember.tags) ? newMember.tags : newMember.tags.split(',').map(t => t.trim()) };
+                const url = editingId ? `/api/admin/team/${editingId}` : '/api/admin/team';
+                const method = editingId ? 'PUT' : 'POST';
+                const res = await fetch(url, {
+                    method, headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ...memberData, order: team.length }), credentials: 'include'
+                });
+                if (res.ok) { await fetchData(); clearForm(); triggerSuccess(); }
+            } finally { setIsUploading(false); }
         }
     };
 
     const handleSaveGallery = async (e) => {
         e.preventDefault();
         if (newGalleryImg) {
-            const url = editingId ? `/api/admin/gallery/${editingId}` : '/api/admin/gallery';
-            const method = editingId ? 'PUT' : 'POST';
-            const res = await fetch(url, {
-                method, headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ url: newGalleryImg, order: gallery.length }), credentials: 'include'
-            });
-            if (res.ok) { await fetchData(); clearForm(); triggerSuccess(); }
+            setIsUploading(true);
+            try {
+                const url = editingId ? `/api/admin/gallery/${editingId}` : '/api/admin/gallery';
+                const method = editingId ? 'PUT' : 'POST';
+                const res = await fetch(url, {
+                    method, headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: newGalleryImg, order: gallery.length }), credentials: 'include'
+                });
+                if (res.ok) { await fetchData(); clearForm(); triggerSuccess(); }
+            } finally { setIsUploading(false); }
         }
     };
 
     const handleSaveProject = async (e) => {
         e.preventDefault();
         if (newProject.title) {
-            const projectData = {
-                ...newProject,
-                id: newProject.id || (projects.length + 1).toString().padStart(2, '0'),
-                tags: Array.isArray(newProject.tags) ? newProject.tags : (newProject.tags || '').split(',').map(t => t.trim()).filter(Boolean)
-            };
-            const url = editingId ? `/api/admin/projects/${editingId}` : '/api/admin/projects';
-            const method = editingId ? 'PUT' : 'POST';
-            const res = await fetch(url, {
-                method, headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ...projectData, order: projects.length }), credentials: 'include'
-            });
-            if (res.ok) { await fetchData(); clearForm(); triggerSuccess(); }
+            setIsUploading(true);
+            try {
+                const projectData = {
+                    ...newProject,
+                    id: newProject.id || (projects.length + 1).toString().padStart(2, '0'),
+                    tags: Array.isArray(newProject.tags) ? newProject.tags : (newProject.tags || '').split(',').map(t => t.trim()).filter(Boolean)
+                };
+                const url = editingId ? `/api/admin/projects/${editingId}` : '/api/admin/projects';
+                const method = editingId ? 'PUT' : 'POST';
+                const res = await fetch(url, {
+                    method, headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ...projectData, order: projects.length }), credentials: 'include'
+                });
+                if (res.ok) { await fetchData(); clearForm(); triggerSuccess(); }
+            } finally { setIsUploading(false); }
         }
     };
 
     const handleSaveSocial = async (e) => {
         e.preventDefault();
         if (newSocial.name && newSocial.url) {
-            const url = editingId ? `/api/admin/socials/${editingId}` : '/api/admin/socials';
-            const method = editingId ? 'PUT' : 'POST';
-            const res = await fetch(url, {
-                method, headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ...newSocial, order: socials.length }), credentials: 'include'
-            });
-            if (res.ok) { await fetchData(); clearForm(); triggerSuccess(); }
+            setIsUploading(true);
+            try {
+                const url = editingId ? `/api/admin/socials/${editingId}` : '/api/admin/socials';
+                const method = editingId ? 'PUT' : 'POST';
+                const res = await fetch(url, {
+                    method, headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ...newSocial, order: socials.length }), credentials: 'include'
+                });
+                if (res.ok) { await fetchData(); clearForm(); triggerSuccess(); }
+            } finally { setIsUploading(false); }
         }
     };
 
@@ -253,7 +269,9 @@ const AdminPanel = ({ onLock }) => {
                                     <span className="text-[10px] font-black uppercase tracking-widest">{newLogo ? 'Logo Processed' : 'Upload Vector Logo'}</span>
                                     <input type="file" className="hidden" onChange={(e) => handleFileUpload(e, 'brand')} />
                                 </label>
-                                <button type="submit" className="w-full py-4 bg-white text-black font-black uppercase text-[10px] tracking-widest">{editingId ? 'Update Brand' : 'Deploy Brand'}</button>
+                                <button type="submit" disabled={isUploading} className={`w-full py-4 font-black uppercase text-[10px] tracking-widest ${isUploading ? 'bg-[#5C5C5C] text-white cursor-not-allowed' : 'bg-white text-black'}`}>
+                                    {isUploading ? 'Processing...' : (editingId ? 'Update Brand' : 'Deploy Brand')}
+                                </button>
                             </form>
                         )}
                         {activeSection === 'team' && (
@@ -267,7 +285,9 @@ const AdminPanel = ({ onLock }) => {
                                     <span className="text-[10px] font-black">Member Photo</span>
                                     <input type="file" className="hidden" onChange={e => handleFileUpload(e, 'member')} />
                                 </label>
-                                <button type="submit" className="w-full py-4 bg-white text-black font-black uppercase text-[10px] tracking-widest mt-4">Deploy Member</button>
+                                <button type="submit" disabled={isUploading} className={`w-full py-4 font-black uppercase text-[10px] tracking-widest mt-4 ${isUploading ? 'bg-[#5C5C5C] text-white cursor-not-allowed' : 'bg-white text-black'}`}>
+                                    {isUploading ? 'Deploying...' : 'Deploy Member'}
+                                </button>
                             </form>
                         )}
                         {activeSection === 'gallery' && (
@@ -277,13 +297,15 @@ const AdminPanel = ({ onLock }) => {
                                     <span className="text-[10px] font-black uppercase tracking-widest">Add To Gallery</span>
                                     <input type="file" className="hidden" onChange={(e) => handleFileUpload(e, 'gallery')} />
                                 </label>
-                                <button type="submit" className="w-full py-4 bg-white text-black font-black uppercase text-[10px] tracking-widest">Update Feed</button>
+                                <button type="submit" disabled={isUploading} className={`w-full py-4 font-black uppercase text-[10px] tracking-widest ${isUploading ? 'bg-[#5C5C5C] text-white cursor-not-allowed' : 'bg-white text-black'}`}>
+                                    {isUploading ? 'Uploading...' : 'Update Feed'}
+                                </button>
                             </form>
                         )}
                         {activeSection === 'projects' && (
                             <form onSubmit={handleSaveProject} className="space-y-4">
                                 <input type="text" placeholder="Project Name" className="w-full bg-black border border-[#5C5C5C] p-3 text-xs outline-none" value={newProject.title} onChange={e => setNewProject({ ...newProject, title: e.target.value })} />
-+                               <input type="text" placeholder="Project URL (https://...)" className="w-full bg-black border border-[#5C5C5C] p-3 text-xs outline-none" value={newProject.link} onChange={e => setNewProject({ ...newProject, link: e.target.value })} />
+                                <input type="text" placeholder="Project URL (https://...)" className="w-full bg-black border border-[#5C5C5C] p-3 text-xs outline-none" value={newProject.link} onChange={e => setNewProject({ ...newProject, link: e.target.value })} />
                                 <input type="text" placeholder="Tags (tag1, tag2)" className="w-full bg-black border border-[#5C5C5C] p-3 text-xs outline-none" value={newProject.tags} onChange={e => setNewProject({ ...newProject, tags: e.target.value })} />
                                 <textarea placeholder="Client's Requirements" className="w-full bg-black border border-[#5C5C5C] p-3 text-xs outline-none h-24" value={newProject.clientMsg} onChange={e => setNewProject({ ...newProject, clientMsg: e.target.value })} />
                                 <textarea placeholder="Our Response" className="w-full bg-black border border-[#5C5C5C] p-3 text-xs outline-none h-24" value={newProject.ourMsg} onChange={e => setNewProject({ ...newProject, ourMsg: e.target.value })} />
@@ -293,7 +315,9 @@ const AdminPanel = ({ onLock }) => {
                                     <span className="text-[10px] font-black uppercase">Project Image</span>
                                     <input type="file" className="hidden" onChange={e => handleFileUpload(e, 'project')} />
                                 </label>
-                                <button type="submit" className="w-full py-4 bg-white text-black font-black uppercase text-[10px] tracking-widest">Update Projects</button>
+                                <button type="submit" disabled={isUploading} className={`w-full py-4 font-black uppercase text-[10px] tracking-widest ${isUploading ? 'bg-[#5C5C5C] text-white cursor-not-allowed' : 'bg-white text-black'}`}>
+                                    {isUploading ? 'Publishing...' : 'Update Projects'}
+                                </button>
                             </form>
                         )}
                         {activeSection === 'socials' && (
@@ -313,7 +337,9 @@ const AdminPanel = ({ onLock }) => {
                                     <option value="Instagram">Instagram</option>
                                 </select>
                                 <input type="text" placeholder="Profile URL / Link" className="w-full bg-black border border-[#5C5C5C] p-3 text-xs outline-none" value={newSocial.url} onChange={e => setNewSocial({ ...newSocial, url: e.target.value })} />
-                                <button type="submit" className="w-full py-4 bg-white text-black font-black uppercase text-[10px] tracking-widest">{editingId ? 'Update Link' : 'Deploy Link'}</button>
+                                <button type="submit" disabled={isUploading} className={`w-full py-4 font-black uppercase text-[10px] tracking-widest ${isUploading ? 'bg-[#5C5C5C] text-white cursor-not-allowed' : 'bg-white text-black'}`}>
+                                    {isUploading ? 'Updating...' : (editingId ? 'Update Link' : 'Deploy Link')}
+                                </button>
                             </form>
                         )}
                     </div>

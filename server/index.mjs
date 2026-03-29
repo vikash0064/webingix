@@ -5,6 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import mongoose from 'mongoose';
 import zlib from 'node:zlib';
+import { uploadToCloudinary, deleteFromCloudinary } from './cloudinary.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -348,36 +349,71 @@ const server = http.createServer(async (req, res) => {
         // Projects
         if (req.method === 'POST' && pathname === '/api/admin/projects') {
             const b = await parseJsonBody(req);
+            if (b.image && b.image.startsWith('data:image')) {
+                b.image = await uploadToCloudinary(b.image, 'projects');
+            }
             const p = await Project.create(b);
             return json(res, 201, p, corsHeaders);
         }
         if (req.method === 'PUT' && pathname.startsWith('/api/admin/projects/')) {
             const id = pathname.split('/').pop();
             const b = await parseJsonBody(req);
+            if (b.image && b.image.startsWith('data:image')) {
+                const old = await Project.findById(id);
+                if (old && old.image) await deleteFromCloudinary(old.image);
+                b.image = await uploadToCloudinary(b.image, 'projects');
+            }
             const p = await Project.findByIdAndUpdate(id, b, { new: true });
             return json(res, 200, p, corsHeaders);
         }
         if (req.method === 'DELETE' && pathname.startsWith('/api/admin/projects/')) {
             const id = pathname.split('/').pop();
+            const old = await Project.findById(id);
+            if (old && old.image) await deleteFromCloudinary(old.image);
             await Project.findByIdAndDelete(id);
             return json(res, 200, { ok: true }, corsHeaders);
         }
 
         // Generic Dynamic Handlers (Logos, Team, Gallery, Socials)
         const entityMap = { 
-            '/api/admin/logos': Logo, 
-            '/api/admin/team': Member, 
-            '/api/admin/gallery': GalleryImg,
-            '/api/admin/socials': Social 
+            '/api/admin/logos': { model: Logo, folder: 'brands' }, 
+            '/api/admin/team': { model: Member, folder: 'team' }, 
+            '/api/admin/gallery': { model: GalleryImg, folder: 'gallery' },
+            '/api/admin/socials': { model: Social, folder: 'socials' } 
         };
-        for (const [pathKey, Model] of Object.entries(entityMap)) {
-            if (pathname === pathKey) {
-                if (req.method === 'POST') { const b = await parseJsonBody(req); const d = await Model.create(b); return json(res, 201, d, corsHeaders); }
+        for (const [pathKey, config] of Object.entries(entityMap)) {
+            const Model = config.model;
+            const folder = config.folder;
+
+            if (pathname === pathKey && req.method === 'POST') {
+                const b = await parseJsonBody(req);
+                const imgField = folder === 'brands' || folder === 'gallery' ? 'url' : folder === 'team' ? 'photo' : null;
+                if (imgField && b[imgField] && b[imgField].startsWith('data:image')) {
+                    b[imgField] = await uploadToCloudinary(b[imgField], folder);
+                }
+                const d = await Model.create(b); 
+                return json(res, 201, d, corsHeaders); 
             }
             if (pathname.startsWith(pathKey + '/')) {
                 const id = pathname.split('/').pop();
-                if (req.method === 'PUT') { const b = await parseJsonBody(req); const d = await Model.findByIdAndUpdate(id, b, { new: true }); return json(res, 200, d, corsHeaders); }
-                if (req.method === 'DELETE') { await Model.findByIdAndDelete(id); return json(res, 200, { ok: true }, corsHeaders); }
+                const imgField = folder === 'brands' || folder === 'gallery' ? 'url' : folder === 'team' ? 'photo' : null;
+
+                if (req.method === 'PUT') {
+                    const b = await parseJsonBody(req);
+                    if (imgField && b[imgField] && b[imgField].startsWith('data:image')) {
+                        const old = await Model.findById(id);
+                        if (old && old[imgField]) await deleteFromCloudinary(old[imgField]);
+                        b[imgField] = await uploadToCloudinary(b[imgField], folder);
+                    }
+                    const d = await Model.findByIdAndUpdate(id, b, { new: true }); 
+                    return json(res, 200, d, corsHeaders);
+                }
+                if (req.method === 'DELETE') {
+                    const old = await Model.findById(id);
+                    if (imgField && old && old[imgField]) await deleteFromCloudinary(old[imgField]);
+                    await Model.findByIdAndDelete(id); 
+                    return json(res, 200, { ok: true }, corsHeaders);
+                }
             }
         }
     }
