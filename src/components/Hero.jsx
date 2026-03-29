@@ -99,8 +99,8 @@ const Hero = () => {
                 </div>
 
                 <div className="mt-auto flex justify-end pr-1 pt-10">
-                    <Link
-                        to="/projects"
+                    <a
+                        href="#contact"
                         className="group relative inline-flex items-center justify-center pl-5 pr-1.5 py-1.5 rounded-full bg-white text-black uppercase text-[7px] font-black tracking-widest overflow-hidden transition-all duration-500 ease-out hover:bg-zinc-200 min-w-[32vw]"
                     >
                         <span className="relative z-10 transition-transform duration-500 group-hover:scale-95 font-['Urbanist'] font-black text-[0.8rem] tracking-[0.04em] pb-0.5 whitespace-nowrap">LET'S TALK</span>
@@ -113,19 +113,26 @@ const Hero = () => {
                                 </span>
                             </span>
                         </span>
-                    </Link>
+                    </a>
                 </div>
 
                 <div className="mt-12 w-full">
                     <div className="mb-5 w-full h-px bg-white/25" />
                     <div className="flex gap-5">
-                        {['LINKEDIN', 'INSTAGRAM', 'BEHANCE', 'X'].map((link) => (
+                        {[
+                            { name: 'X', url: 'https://x.com/' },
+                            { name: 'INSTAGRAM', url: 'https://www.instagram.com/webnginx.dev/' },
+                            { name: 'WHATSAPP', url: 'https://wa.me/918153929447' },
+                            { name: 'LINKEDIN', url: 'https://www.linkedin.com/company/webingix/' }
+                        ].map((link) => (
                             <a
-                                key={link}
-                                href={`#${link}`}
-                                className="text-[9px] font-['Urbanist'] font-black text-white hover:text-white/50 transition-colors tracking-[0.16em]"
+                                key={link.name}
+                                href={link.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-[8.5px] font-['Urbanist'] font-black text-white hover:text-[#39ff14] transition-colors tracking-[0.16em]"
                             >
-                                {link}
+                                {link.name}
                             </a>
                         ))}
                     </div>
@@ -188,8 +195,8 @@ const Hero = () => {
                     </div>
 
                     <div ref={btnRef} className="mt-8 flex items-center">
-                        <Link
-                            to="/projects"
+                        <a
+                            href="#contact"
                             className="group relative inline-flex items-center justify-center pl-5 pr-1 py-1 rounded-full bg-white text-black uppercase text-[7px] md:text-[10px] font-black tracking-widest overflow-hidden transition-all duration-500 ease-out hover:bg-zinc-200"
                         >
                             <span className="relative z-10 transition-transform duration-500 group-hover:scale-95 font-['Urbanist'] font-black text-[10px] md:text-[12px] tracking-widest pb-0.5">Let's Talk</span>
@@ -202,7 +209,7 @@ const Hero = () => {
                                     </span>
                                 </span>
                             </span>
-                        </Link>
+                        </a>
                     </div>
                 </div>
 
@@ -215,9 +222,20 @@ const Hero = () => {
             <div className="absolute bottom-4 md:bottom-6 left-8 md:left-20 z-10 w-[calc(100%-64px)] md:w-[calc(100%-160px)] hidden md:block">
                 <div className="mb-6 w-full h-[2px] bg-white/40" />
                 <div ref={socialRef} className="flex gap-12">
-                    {['LINKEDIN', 'INSTAGRAM', 'BEHANCE', 'X'].map((link) => (
-                        <a key={link} href={`#${link}`} className="text-[10px] md:text-[11px] font-['Urbanist'] font-black text-white hover:text-white/50 transition-colors tracking-[0.2em]">
-                            {link}
+                    {[
+                        { name: 'LINKEDIN', url: 'https://www.linkedin.com/company/webingix/' },
+                        { name: 'INSTAGRAM', url: 'https://www.instagram.com/webnginx.dev/' },
+                        { name: 'WHATSAPP', url: 'https://wa.me/918153929447' },
+                        { name: 'X', url: 'https://x.com/' }
+                    ].map((link) => (
+                        <a 
+                            key={link.name} 
+                            href={link.url} 
+                            target="_blank" 
+                            rel="noopener noreferrer" 
+                            className="text-[9px] md:text-[10px] font-['Urbanist'] font-black text-white hover:text-[#39ff14] transition-colors tracking-[0.2em]"
+                        >
+                            {link.name}
                         </a>
                     ))}
                 </div>

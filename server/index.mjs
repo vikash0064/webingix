@@ -198,6 +198,14 @@ const Social = mongoose.model('Social', SocialSchema);
 const SettingSchema = new mongoose.Schema({ key: String, value: mongoose.Schema.Types.Mixed });
 const Setting = mongoose.model('Setting', SettingSchema);
 
+const AboutSchema = new mongoose.Schema({
+    whoWeAre: { type: String, default: 'We are WebNginx, a forward-thinking digital studio dedicated to crafting stunning, high-performance websites that empower businesses with real growth.' },
+    vision: { type: String, default: 'To be the catalyst for your digital success, providing innovative web solutions that set you apart in the digital landscape.' },
+    approach: { type: String, default: 'Client-first, transparent, and quality-driven. We believe in building partnerships, not just websites. Your satisfaction is our top priority.' },
+    updatedAt: { type: Date, default: Date.now }
+});
+const AboutContent = mongoose.model('AboutContent', AboutSchema);
+
 // ELITE STATIC CACHE: Store data in memory for sub-millisecond delivery
 let staticCache = {
     projects: null,
@@ -205,33 +213,26 @@ let staticCache = {
     team: null,
     gallery: null,
     socials: null,
-    isStatic: false
+    about: null
 };
 
 async function updateStaticCache() {
-    const s = await Setting.findOne({ key: 'isStaticMode' });
-    staticCache.isStatic = s ? !!s.value : false;
-    if (staticCache.isStatic) {
-        console.log('[admin-server] Static Mode ACTIVE - Warming cache...');
-        const [p, l, t, g, soc] = await Promise.all([
-            Project.find().sort({ order: 1 }),
-            Logo.find().sort({ order: 1 }),
-            Member.find().sort({ order: 1 }),
-            GalleryImg.find().sort({ order: 1 }),
-            Social.find().sort({ order: 1 })
-        ]);
-        staticCache.projects = p;
-        staticCache.logos = l;
-        staticCache.team = t;
-        staticCache.gallery = g;
-        staticCache.socials = soc;
-    } else {
-        staticCache.projects = null;
-        staticCache.logos = null;
-        staticCache.team = null;
-        staticCache.gallery = null;
-        staticCache.socials = null;
-    }
+    console.log('[admin-server] Refreshing Infinity-Fast Static Cache...');
+    const [p, l, t, g, soc, ab] = await Promise.all([
+        Project.find().sort({ order: 1 }),
+        Logo.find().sort({ order: 1 }),
+        Member.find().sort({ order: 1 }),
+        GalleryImg.find().sort({ order: 1 }),
+        Social.find().sort({ order: 1 }),
+        AboutContent.findOne() || AboutContent.create({})
+    ]);
+    staticCache.projects = p;
+    staticCache.logos = l;
+    staticCache.team = t;
+    staticCache.gallery = g;
+    staticCache.socials = soc;
+    staticCache.about = ab;
+    console.log('[admin-server] Cache SYNC COMPLETE - Delivery at 0ms latency');
 }
 
 // --- Server Utils ---
@@ -340,30 +341,33 @@ const server = http.createServer(async (req, res) => {
         } catch { return json(res, 500, { error: 'Internal Error' }, corsHeaders); }
     }
 
-    // Public API: Content Retrieval (CACHE-FIRST SUCCESS: Sub-millisecond data delivery)
+    // Public API: Content Retrieval (ULTRA-FAST PERPETUAL STATIC CACHE: Sub-millisecond data delivery)
     if (req.method === 'GET' && pathname === '/api/projects') {
-        const data = staticCache.isStatic && staticCache.projects ? staticCache.projects : await Project.find().sort({ order: 1 });
+        const data = staticCache.projects || await Project.find().sort({ order: 1 });
         return json(res, 200, data, corsHeaders);
     }
     if (req.method === 'GET' && pathname === '/api/logos') {
-        const data = staticCache.isStatic && staticCache.logos ? staticCache.logos : await Logo.find().sort({ order: 1 });
+        const data = staticCache.logos || await Logo.find().sort({ order: 1 });
         return json(res, 200, data, corsHeaders);
     }
     if (req.method === 'GET' && pathname === '/api/team') {
-        const data = staticCache.isStatic && staticCache.team ? staticCache.team : await Member.find().sort({ order: 1 });
+        const data = staticCache.team || await Member.find().sort({ order: 1 });
         return json(res, 200, data, corsHeaders);
     }
     if (req.method === 'GET' && pathname === '/api/gallery') {
-        const data = staticCache.isStatic && staticCache.gallery ? staticCache.gallery : await GalleryImg.find().sort({ order: 1 });
+        const data = staticCache.gallery || await GalleryImg.find().sort({ order: 1 });
         return json(res, 200, data, corsHeaders);
     }
     if (req.method === 'GET' && pathname === '/api/socials') {
-        const data = staticCache.isStatic && staticCache.socials ? staticCache.socials : await Social.find().sort({ order: 1 });
+        const data = staticCache.socials || await Social.find().sort({ order: 1 });
+        return json(res, 200, data, corsHeaders);
+    }
+    if (req.method === 'GET' && pathname === '/api/about') {
+        const data = staticCache.about || await AboutContent.findOne() || await AboutContent.create({});
         return json(res, 200, data, corsHeaders);
     }
     if (req.method === 'GET' && pathname === '/api/settings') {
-        const s = await Setting.findOne({ key: 'isStaticMode' });
-        return json(res, 200, { isStaticMode: s ? !!s.value : false }, corsHeaders);
+        return json(res, 200, { performanceTier: 'STATIC_ACCELERATED' }, corsHeaders);
     }
 
     // Admin Auth
@@ -389,6 +393,18 @@ const server = http.createServer(async (req, res) => {
             await Setting.findOneAndUpdate({ key: 'isStaticMode' }, { value: !!b.value }, { upsert: true });
             await updateStaticCache();
             return json(res, 200, { ok: true, isStaticMode: !!b.value }, corsHeaders);
+        }
+
+        // About Content
+        if (req.method === 'POST' && pathname === '/api/admin/about') {
+            const b = await parseJsonBody(req);
+            let ab = await AboutContent.findOne();
+            if (!ab) ab = new AboutContent(b);
+            else Object.assign(ab, b);
+            ab.updatedAt = new Date();
+            await ab.save();
+            await updateStaticCache(); // REFRESH CACHE
+            return json(res, 200, ab, corsHeaders);
         }
 
         // Submissions

@@ -137,8 +137,8 @@ const WeBuildBetter = () => {
         <section ref={containerRef} className="bg-transparent pt-[2vw] pb-12 relative z-20 overflow-hidden">
             <div className="md:hidden px-4 pt-10">
                 <div className="w-full h-px bg-white/20 mb-6" />
-                <div className="text-[8px] font-black uppercase tracking-[0.14em] text-white text-center mb-6">
-                    02/WHY YOU NEED US
+                <div className="text-[9px] font-black uppercase tracking-[0.25em] text-white text-left mb-8 opacity-70">
+                    02 / WHY YOU NEED US
                 </div>
                 <div className="relative mb-8">
                     <h2 className="text-[clamp(3.4rem,17vw,6.2rem)] leading-[0.82] font-display font-normal text-white uppercase tracking-tighter">

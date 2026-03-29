@@ -18,21 +18,24 @@ const AdminPanel = ({ onLock }) => {
     const [gallery, setGallery] = useState([]);
     const [projects, setProjects] = useState([]);
     const [socials, setSocials] = useState([]);
+    const [aboutContent, setAboutContent] = useState({ whoWeAre: '', vision: '', approach: '' });
 
     const fetchData = async () => {
         try {
-            const [lRes, tRes, gRes, pRes, sRes, setRes] = await Promise.all([
+            const [lRes, tRes, gRes, pRes, sRes, setRes, abRes] = await Promise.all([
                 fetch('/api/logos'),
                 fetch('/api/team'),
                 fetch('/api/gallery'),
                 fetch('/api/projects'),
                 fetch('/api/socials'),
-                fetch('/api/settings')
+                fetch('/api/settings'),
+                fetch('/api/about')
             ]);
             if (lRes.ok) setLogos(await lRes.json());
             if (tRes.ok) setTeam(await tRes.json());
             if (gRes.ok) setGallery(await gRes.json());
             if (sRes.ok) setSocials(await sRes.json());
+            if (abRes.ok) setAboutContent(await abRes.json());
             if (setRes.ok) {
                 const sData = await setRes.json();
                 setIsStaticMode(sData.isStaticMode);
@@ -195,6 +198,20 @@ const AdminPanel = ({ onLock }) => {
         }
     };
 
+    const handleSaveAbout = async (e) => {
+        e.preventDefault();
+        setIsUploading(true);
+        try {
+            const res = await fetch('/api/admin/about', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(aboutContent),
+                credentials: 'include'
+            });
+            if (res.ok) { await fetchData(); triggerSuccess(); }
+        } finally { setIsUploading(false); }
+    };
+
     const startEditingLogo = (logo) => { setActiveSection('brands'); setEditingId(logo._id); setNewLogo(logo.url); };
     const startEditingMember = (member) => { setActiveSection('team'); setEditingId(member._id); const safeTags = Array.isArray(member.tags) ? member.tags.join(', ') : (member.tags || ''); setNewMember({ ...member, tags: safeTags }); };
     const startEditingGallery = (img) => { setActiveSection('gallery'); setEditingId(img._id); setNewGalleryImg(img.url); };
@@ -241,6 +258,7 @@ const AdminPanel = ({ onLock }) => {
                 <nav className="flex flex-row md:flex-col w-full p-2 md:p-4 gap-2">
                     {[
                         { id: 'leads', icon: Users, label: 'Leads' },
+                        { id: 'about', icon: Globe, label: 'About Hub' },
                         { id: 'brands', icon: LayoutGrid, label: 'Brands' },
                         { id: 'team', icon: Users, label: 'Team' },
                         { id: 'gallery', icon: ImageIcon, label: 'Gallery' },
@@ -267,12 +285,16 @@ const AdminPanel = ({ onLock }) => {
                             </h1>
                         </div>
                         <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-2 px-4 py-2 border border-[#39FF14]/20 bg-[#39FF14]/5 text-[#39FF14] text-[10px] font-black uppercase tracking-[0.2em]">
+                                <Zap size={14} className="animate-pulse" />
+                                <span>Platform: Ultra-Optimized</span>
+                            </div>
                             <button 
-                                onClick={() => toggleStaticMode(!isStaticMode)} 
-                                className={`flex items-center gap-2 px-4 py-2 border text-[10px] font-black uppercase tracking-widest transition-all ${isStaticMode ? 'bg-[#39FF14] text-black border-[#39FF14] hover:bg-black hover:text-[#39FF14]' : 'bg-white/5 border-[#5C5C5C] text-[#5C5C5C] hover:border-white hover:text-white'}`}
+                                onClick={() => toggleStaticMode(true)} 
+                                className="flex items-center gap-2 px-4 py-2 border border-[#5C5C5C] text-white text-[10px] font-black uppercase tracking-widest hover:border-white hover:bg-white hover:text-black transition-all"
                             >
-                                <Zap size={14} className={isStaticMode ? "animate-pulse" : ""} />
-                                {isStaticMode ? 'INFINITY FAST ENABLED' : 'DEPLOY AS STATIC'}
+                                <Zap size={14} />
+                                SNAP FOR PRODUCTION
                             </button>
                             {onLock && (
                                 <button onClick={onLock} className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-[#5C5C5C] text-white text-[10px] font-black uppercase tracking-widest hover:border-white hover:bg-white hover:text-black transition-all">
@@ -326,6 +348,19 @@ const AdminPanel = ({ onLock }) => {
                                     Note: Brand and Gallery media remain globally optimized via Cloudinary CDN regardless of this setting.
                                 </div>
                             </div>
+                        )}
+                        {activeSection === 'about' && (
+                            <form onSubmit={handleSaveAbout} className="space-y-4">
+                                <label className="text-[10px] font-black uppercase text-[#5C5C5C]">Who We Are</label>
+                                <textarea className="w-full bg-black border border-[#5C5C5C] p-3 text-xs outline-none h-32" value={aboutContent.whoWeAre} onChange={e => setAboutContent({ ...aboutContent, whoWeAre: e.target.value })} />
+                                <label className="text-[10px] font-black uppercase text-[#5C5C5C]">Our Vision</label>
+                                <textarea className="w-full bg-black border border-[#5C5C5C] p-3 text-xs outline-none h-24" value={aboutContent.vision} onChange={e => setAboutContent({ ...aboutContent, vision: e.target.value })} />
+                                <label className="text-[10px] font-black uppercase text-[#5C5C5C]">Our Approach</label>
+                                <textarea className="w-full bg-black border border-[#5C5C5C] p-3 text-xs outline-none h-24" value={aboutContent.approach} onChange={e => setAboutContent({ ...aboutContent, approach: e.target.value })} />
+                                <button type="submit" disabled={isUploading} className="w-full py-4 bg-white text-black font-black uppercase text-[10px] tracking-widest mt-4">
+                                    {isUploading ? 'Syncing...' : 'Save About Content'}
+                                </button>
+                            </form>
                         )}
                         {activeSection === 'brands' && (
                             <form onSubmit={handleSaveLogo} className="space-y-6">

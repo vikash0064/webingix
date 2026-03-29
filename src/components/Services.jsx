@@ -95,10 +95,10 @@ const Services = () => {
                 </div>
 
                 <div ref={headingRef} className="flex flex-col md:flex-row md:items-end gap-[0.25vw] md:pl-[2vw]">
-                    <h2 className="text-[clamp(1.5rem,7.2vw,8.5rem)] leading-[0.85] font-display font-normal text-white uppercase tracking-tighter whitespace-nowrap flex">
+                    <h2 className="text-[clamp(2.4rem,14vw,8.5rem)] leading-[0.85] font-display font-normal text-white uppercase tracking-tighter flex flex-wrap">
                         {splitText('WHAT WE BUILD')}
                     </h2>
-                    <span className="text-[clamp(0.8rem,2.4vw,2.5rem)] leading-none font-display font-medium text-[#39ff14] uppercase tracking-tighter mb-[0.8vw] flex mt-2 md:mt-0 md:ml-[-0.8vw]">
+                    <span className="text-[clamp(1.1rem,6vw,2.5rem)] leading-none font-display font-medium text-[#39ff14] uppercase tracking-tighter mb-[0.8vw] flex mt-1 md:mt-0 md:ml-[-0.8vw]">
                         {splitText('/OUR EXPERTISE')}
                     </span>
                 </div>

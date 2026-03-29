@@ -184,7 +184,7 @@ const Contact = ({ isContactPage = false }) => {
         ));
     };
     return (
-        <section ref={containerRef} className="bg-[#151515] pt-[2vw] pb-32 relative z-20 overflow-hidden">
+        <section ref={containerRef} id="contact" className="bg-[#151515] pt-[2vw] pb-32 relative z-20 overflow-hidden">
             {/* Add Handwriting Font */}
             <style dangerouslySetInnerHTML={{
                 __html: `

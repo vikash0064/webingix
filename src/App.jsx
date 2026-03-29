@@ -34,6 +34,7 @@ function App() {
         queryClient.prefetchQuery({ queryKey:['projects'], queryFn: async () => (await fetch('/api/projects')).json(), staleTime: 1000 * 60 * 10 }),
         queryClient.prefetchQuery({ queryKey:['team'], queryFn: async () => (await fetch('/api/team')).json(), staleTime: 1000 * 60 * 30 }),
         queryClient.prefetchQuery({ queryKey:['socials'], queryFn: async () => (await fetch('/api/socials')).json(), staleTime: 1000 * 60 * 60 }),
+        queryClient.prefetchQuery({ queryKey:['about_data'], queryFn: async () => (await fetch('/api/about')).json(), staleTime: 1000 * 60 * 60 }),
       ]);
     };
     prefetchData();
@@ -61,6 +62,16 @@ function App() {
       lenis.raf(time * 1000);
     });
     gsap.ticker.lagSmoothing(0);
+
+    // GLOBAL HASH INTERCEPT: Use Lenis for all smooth scrolls to anchors
+    const handleAnchorClick = (e) => {
+      const target = e.target.closest('a');
+      if (target && target.hash && target.pathname === window.location.pathname) {
+        e.preventDefault();
+        lenis.scrollTo(target.hash, { offset: 0, duration: 1.2 });
+      }
+    };
+    window.addEventListener('click', handleAnchorClick);
 
     const ctx = gsap.context(() => {
       const revealElements = gsap.utils.toArray('.reveal');
@@ -90,6 +101,7 @@ function App() {
 
     return () => {
       clearTimeout(timer);
+      window.removeEventListener('click', handleAnchorClick);
       lenis.destroy();
       gsap.ticker.remove(lenis.raf);
       ctx.revert();

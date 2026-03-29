@@ -113,18 +113,15 @@ const Technologies = () => {
                                     {item.corners?.map((c, i) => React.cloneElement(renderCorner(c), { key: i }))}
                                 </div>
 
-                                {/* Content */}
-                                <div className="relative z-[2] w-full h-full p-4 sm:p-6 flex flex-col items-center justify-center gap-3">
-                                    <div className="w-[48%] h-[48%] flex items-center justify-center">
+                                 {/* Content */}
+                                <div className="relative z-[2] w-full h-full p-4 sm:p-6 flex flex-col items-center justify-center">
+                                    <div className="w-[54%] h-[54%] flex items-center justify-center">
                                         <img 
                                             src={item.icon} 
                                             alt={item.name} 
-                                            className={`w-full h-full object-contain transition-all duration-700 group-hover:scale-115 group-hover:rotate-[5deg] ${item.imageClass || ''}`} 
+                                            className={`w-full h-full object-contain transition-all duration-700 group-hover:scale-110 group-hover:rotate-[5deg] ${item.imageClass || ''}`} 
                                         />
                                     </div>
-                                    <span className="text-[9px] md:text-[min(0.8vw,12px)] font-black uppercase tracking-[0.16em] text-white/30 group-hover:text-white/70 transition-colors duration-500 text-center leading-tight">
-                                        {item.name}
-                                    </span>
                                 </div>
                             </div>
                         ))}
