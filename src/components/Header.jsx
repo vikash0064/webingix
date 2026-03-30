@@ -3,33 +3,22 @@ import { Link, useNavigate } from 'react-router-dom';
 
 const Logo = () => {
     return (
-        <svg width="244" height="52" viewBox="0 0 350 100" xmlns="http://www.w3.org/2000/svg" className="w-[35vw] h-auto md:w-[14vw]">
-            <defs>
-                <style>{`@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap');`}</style>
-            </defs>
-
-            {/* Tech Frame Design */}
-            <rect x="8" y="12" width="334" height="76" fill="none" stroke="#ffffff" strokeWidth="1" />
-            
-            {/* Corners */}
-            <rect x="5" y="9" width="6" height="6" fill="#000" stroke="#ffffff" strokeWidth="0.8" />
-            <rect x="339" y="9" width="6" height="6" fill="#000" stroke="#ffffff" strokeWidth="0.8" />
-            <rect x="5" y="85" width="6" height="6" fill="#000" stroke="#ffffff" strokeWidth="0.8" />
-            <rect x="339" y="85" width="6" height="6" fill="#000" stroke="#ffffff" strokeWidth="0.8" />
-
-            {/* Mid markers */}
-            <rect x="172" y="9" width="6" height="6" fill="#000" stroke="#ffffff" strokeWidth="0.8" />
-            <rect x="172" y="85" width="6" height="6" fill="#000" stroke="#ffffff" strokeWidth="0.8" />
-
-            <text x="50%" y="54%"
-                fontFamily="'Bebas Neue', Impact, 'Arial Narrow', sans-serif"
-                fontSize="92" fontWeight="900"
+        <svg width="350" height="100" viewBox="0 0 350 100" xmlns="http://www.w3.org/2000/svg" className="w-[35vw] h-auto md:w-[14vw]">
+            <rect x="8" y="9" width="334" height="79" fill="black" stroke="white" strokeWidth="1" />
+            <rect x="172" y="6" width="6" height="6" fill="black" stroke="white" strokeWidth="0.8" />
+            <rect x="172" y="85" width="6" height="6" fill="black" stroke="white" strokeWidth="0.8" />
+            <rect x="5" y="6" width="6" height="6" fill="black" stroke="white" strokeWidth="0.8" />
+            <rect x="339" y="6" width="6" height="6" fill="black" stroke="white" strokeWidth="0.8" />
+            <rect x="5" y="85" width="6" height="6" fill="black" stroke="white" strokeWidth="0.8" />
+            <rect x="339" y="85" width="6" height="6" fill="black" stroke="white" strokeWidth="0.8" />
+            <text x="50%" y="55%"
+                fontFamily="'Arial Black', Gadget, sans-serif"
+                fontSize="88" fontWeight="900"
                 dominantBaseline="middle"
                 textAnchor="middle"
-                letterSpacing="1"
-                textLength="310"
+                textLength="300"
                 lengthAdjust="spacingAndGlyphs">
-                <tspan fill="#ffffff">WEBINGI</tspan><tspan fill="#39ff14">X</tspan>
+                <tspan fill="white">WEBINGI</tspan><tspan fill="#39ff14">X</tspan>
             </text>
         </svg>
     );

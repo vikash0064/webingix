@@ -113,10 +113,10 @@ async function seedProjects() {
                 },
                 {
                     id: '04',
-                    title: 'SmileCare',
+                    title: 'FinTech App',
                     time: '24 h',
-                    clientMsg: 'We want a premium website that makes patients excited about dentistry.',
-                    ourMsg: 'We will keep it calm, clean, and confidence-building for patients.',
+                    clientMsg: 'We need a professional fintech mobile app with charts, security, and a seamless dashboard.',
+                    ourMsg: 'We will focus on a clean, scalable, and trust-oriented dashboard experience.',
                     image: '/yo.png',
                     order: 3
                 }

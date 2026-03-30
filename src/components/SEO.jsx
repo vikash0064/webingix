@@ -2,9 +2,9 @@ import React, { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 
 const SEO = ({ 
-  title = "Webingix | Premium Digital Agency", 
-  description = "Webingix: We craft futuristic digital solutions, premium websites, and custom apps designed to drive real business growth.",
-  keywords = "Webingix, web design, app development, digital marketing, React development, New Delhi agency"
+  title = "Webingix | Premium Web Design & Mobile App Development", 
+  description = "Webingix provides professional web design, mobile app development, and graphic design services. We craft futuristic digital solutions to drive business growth.",
+  keywords = "web design, app development, graphics design, Webingix agency, digital solutions, premium websites"
 }) => {
   const location = useLocation();
 
