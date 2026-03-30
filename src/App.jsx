@@ -12,6 +12,7 @@ import ServicesPage from './pages/ServicesPage';
 import ProjectsPage from './pages/ProjectsPage';
 import ContactPage from './pages/ContactPage';
 import AdminAccessPage from './pages/AdminAccessPage';
+import NotFoundPage from './pages/NotFoundPage';
 import SEO from './components/SEO';
 import Preloader from './components/Preloader';
 import { useQueryClient } from '@tanstack/react-query'
@@ -24,18 +25,29 @@ function App() {
   const [showPreloader, setShowPreloader] = React.useState(true);
   const [isPreloading, setIsPreloading] = React.useState(true);
   const queryClient = useQueryClient();
-  
+
   const showHeader = location.pathname !== '/admin' && !isPreloading;
   const showFooter = location.pathname !== '/admin' && location.pathname !== '/contact' && !isPreloading;
 
   useEffect(() => {
-    // Prefetch ALL critical data in parallel - PRIORITIZING TEAM FOR ABOUT PAGE
+    // ELITE SAFE-FETCH: Prevent app crash even if backend is offline/erroring
+    const safeFetch = async (url) => {
+      try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return await res.json();
+      } catch (err) {
+        console.warn(`[App] Prefetch failed for ${url}:`, err.message);
+        return []; // Fallback to empty state
+      }
+    };
+
     const prefetchData = async () => {
       await Promise.allSettled([
-        queryClient.prefetchQuery({ queryKey:['projects'], queryFn: async () => (await fetch('/api/projects')).json(), staleTime: 1000 * 60 * 10 }),
-        queryClient.prefetchQuery({ queryKey:['team'], queryFn: async () => (await fetch('/api/team')).json(), staleTime: 1000 * 60 * 30 }),
-        queryClient.prefetchQuery({ queryKey:['socials'], queryFn: async () => (await fetch('/api/socials')).json(), staleTime: 1000 * 60 * 60 }),
-        queryClient.prefetchQuery({ queryKey:['about_data'], queryFn: async () => (await fetch('/api/about')).json(), staleTime: 1000 * 60 * 60 }),
+        queryClient.prefetchQuery({ queryKey:['projects'], queryFn: () => safeFetch('/api/projects'), staleTime: 1000 * 60 * 10 }),
+        queryClient.prefetchQuery({ queryKey:['team'], queryFn: () => safeFetch('/api/team'), staleTime: 1000 * 60 * 30 }),
+        queryClient.prefetchQuery({ queryKey:['socials'], queryFn: () => safeFetch('/api/socials'), staleTime: 1000 * 60 * 60 }),
+        queryClient.prefetchQuery({ queryKey:['about_data'], queryFn: () => safeFetch('/api/about'), staleTime: 1000 * 60 * 60 }),
       ]);
     };
     prefetchData();
@@ -137,6 +149,7 @@ function App() {
               <Route path="/projects" element={<ProjectsPage />} />
               <Route path="/contact" element={<ContactPage />} />
               <Route path="/admin" element={<AdminAccessPage />} />
+              <Route path="*" element={<NotFoundPage />} />
             </Routes>
           )}
         </div>

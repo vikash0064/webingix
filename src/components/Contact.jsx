@@ -80,56 +80,64 @@ const Contact = ({ isContactPage = false }) => {
 
     React.useLayoutEffect(() => {
         const ctx = gsap.context(() => {
-            const desktopChars = gsap.utils.toArray('.contact-main-heading .char');
-            gsap.fromTo(desktopChars,
-                { y: '100%' },
-                {
-                    y: '0%',
-                    duration: 0.75,
-                    stagger: 0.012,
-                    ease: "cubic-bezier(0.8, 0, 0.2, 1)",
-                    scrollTrigger: {
-                        trigger: '.contact-main-heading',
-                        start: 'top 85%',
-                        toggleActions: 'play none none none'
-                    }
+            if (isContactPage) {
+                const desktopChars = gsap.utils.toArray('.contact-main-heading .char');
+                if (desktopChars.length > 0) {
+                    gsap.fromTo(desktopChars,
+                        { y: '100%' },
+                        {
+                            y: '0%',
+                            duration: 0.75,
+                            stagger: 0.012,
+                            ease: "cubic-bezier(0.8, 0, 0.2, 1)",
+                            scrollTrigger: {
+                                trigger: '.contact-main-heading',
+                                start: 'top 85%',
+                                toggleActions: 'play none none none'
+                            }
+                        }
+                    );
                 }
-            );
 
-            const mobileChars = gsap.utils.toArray('.contact-main-heading-mobile .char');
-            gsap.fromTo(mobileChars,
-                { y: '100%' },
-                {
-                    y: '0%',
-                    duration: 0.75,
-                    stagger: 0.012,
-                    ease: "cubic-bezier(0.8, 0, 0.2, 1)",
-                    scrollTrigger: {
-                        trigger: '.contact-main-heading-mobile',
-                        start: 'top 88%',
-                        toggleActions: 'play none none none'
-                    }
+                const mobileChars = gsap.utils.toArray('.contact-main-heading-mobile .char');
+                if (mobileChars.length > 0) {
+                    gsap.fromTo(mobileChars,
+                        { y: '100%' },
+                        {
+                            y: '0%',
+                            duration: 0.75,
+                            stagger: 0.012,
+                            ease: "cubic-bezier(0.8, 0, 0.2, 1)",
+                            scrollTrigger: {
+                                trigger: '.contact-main-heading-mobile',
+                                start: 'top 88%',
+                                toggleActions: 'play none none none'
+                            }
+                        }
+                    );
                 }
-            );
+            }
 
             const secondaryChars = gsap.utils.toArray('.contact-secondary-heading .letter-anim');
-            gsap.fromTo(secondaryChars,
-                { y: 80, opacity: 0 },
-                {
-                    y: 0,
-                    opacity: 1,
-                    duration: 0.4,
-                    stagger: 0.012,
-                    ease: "power3.out",
-                    scrollTrigger: {
-                        trigger: '.contact-secondary-heading',
-                        start: 'top 92%',
-                        toggleActions: 'play none none none'
+            if (secondaryChars.length > 0) {
+                gsap.fromTo(secondaryChars,
+                    { y: 80, opacity: 0 },
+                    {
+                        y: 0,
+                        opacity: 1,
+                        duration: 0.4,
+                        stagger: 0.012,
+                        ease: "power3.out",
+                        scrollTrigger: {
+                            trigger: '.contact-secondary-heading',
+                            start: 'top 92%',
+                            toggleActions: 'play none none none'
+                        }
                     }
-                }
-            );
+                );
+            }
 
-            if (headingImgRef.current) {
+            if (headingImgRef.current && isContactPage) {
                 gsap.fromTo(headingImgRef.current,
                     { x: 50, y: 30, opacity: 0, rotate: 10 },
                     {

@@ -18,9 +18,9 @@ const Footer = () => {
             <div className="px-[2vw] pb-0 flex items-center justify-center min-h-[30vh]">
                 {/* Massive Branding Watermark - High Visibility (Image Match) */}
                 <div className="select-none pointer-events-none w-full transform translate-y-[12%]">
-                    <h1 className="footer-metallic-text font-anton text-[28vw] leading-[0.8] uppercase text-center opacity-[0.72] tracking-tighter">
+                    <h2 className="footer-metallic-text font-anton text-[28vw] leading-[0.8] uppercase text-center opacity-[0.72] tracking-tighter">
                         WEBINGI<span className="text-[#39ff14] opacity-100 inline-block text-[1.05em] translate-y-[0.02em]">X</span>
-                    </h1>
+                    </h2>
                 </div>
             </div>
 

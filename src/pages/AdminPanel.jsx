@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Trash2, LayoutGrid, Users, LogOut, CheckCircle, Image as ImageIcon, Briefcase, Check, Edit2, X, Share2, Globe, Phone, Mail, Zap, ShieldCheck } from 'lucide-react';
 
+import Logo from '../components/Logo';
+
 const PROJECTS_STORAGE_KEY = 'projects_data';
 const PROJECTS_UPDATE_EVENT = 'webingix:projects_data_updated';
 
@@ -251,8 +253,8 @@ const AdminPanel = ({ onLock }) => {
 
             <aside className="w-full md:w-64 border-t md:border-t-0 md:border-r border-[#5C5C5C] md:h-screen fixed md:sticky bottom-0 md:top-0 z-50 bg-[#111] flex flex-row md:flex-col items-center md:items-stretch overflow-x-auto md:overflow-hidden px-4 md:px-0 bg-opacity-95 backdrop-blur-md md:bg-opacity-100">
                 <div className="p-4 md:px-8 md:py-16 border-b border-[#5C5C5C] hidden md:block">
-                    <div className="flex items-center justify-start">
-                        <img src="/logo.svg" alt="Webingix" className="h-14 w-auto brightness-200" />
+                    <div className="flex items-center justify-start scale-75 -ml-4">
+                        <Logo className="h-10 w-auto" />
                     </div>
                 </div>
                 <nav className="flex flex-row md:flex-col w-full p-2 md:p-4 gap-2">

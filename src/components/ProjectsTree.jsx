@@ -28,9 +28,9 @@ const fallbackProjects = [
     },
     {
         id: '04',
-        title: 'VAILANKANNI',
-        tags: ['Healthcare', 'Clinic', 'Trust'],
-        desc: 'Clear and trusted experience for a healthcare-focused brand',
+        title: 'NEON CAPITAL',
+        tags: ['Investment', 'Fintech', 'Dashboard'],
+        desc: 'Advanced trading and investment platform',
         image: '/vikash.jpeg'
     }
 ];

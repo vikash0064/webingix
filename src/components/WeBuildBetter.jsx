@@ -35,10 +35,10 @@ const staticProjects = [
     },
     {
         id: '04',
-        title: 'SmileCare',
+        title: 'FintechMax',
         time: '24 h',
-        clientMsg: 'We want a premium website that makes patients excited about dentistry.',
-        ourMsg: 'We will keep it calm, clean, and confidence-building for patients.',
+        clientMsg: 'We need a highly secure, data-rich dashboard for our global fintech users.',
+        ourMsg: 'We will implement real-time charts, high-security protocols, and a dark-mode-first UI.',
         image: '/yo.png'
     }
 ];
@@ -114,7 +114,7 @@ const WeBuildBetter = () => {
                     }
                 });
             }
-            
+
             // Ensure ScrollTrigger refreshes when dynamic content is ready
             ScrollTrigger.refresh();
         });
@@ -317,10 +317,10 @@ const WeBuildBetter = () => {
                                         <img src={project.image} alt={project.title} className="w-full h-full object-cover" />
                                     </div>
                                     {project.link && (
-                                        <a 
-                                            href={project.link} 
-                                            target="_blank" 
-                                            rel="noopener noreferrer" 
+                                        <a
+                                            href={project.link}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
                                             className="absolute -bottom-[2.5vw] right-0 bg-[#39FF14] text-black px-[1vw] py-[0.4vw] text-[min(0.8vw,12px)] font-black uppercase tracking-widest hover:bg-white transition-colors pointer-events-auto"
                                         >
                                             Visit Live

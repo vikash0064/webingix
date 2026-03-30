@@ -81,7 +81,7 @@ const Technologies = () => {
                     <div className="relative inline-block w-[1.1em] md:w-[1.3em] transform -translate-y-1 md:-translate-y-2 letter-anim">
                         <motion.img
                             src="/yo.png"
-                            alt="yo image"
+                            alt="Friendly greeting illustration indicating our expert team approach"
                             className="w-full h-auto object-contain"
                             initial={{ scale: 0, opacity: 0, rotate: -5 }}
                             whileInView={{ scale: 1, opacity: 1, rotate: 10 }}

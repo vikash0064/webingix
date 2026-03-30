@@ -65,7 +65,7 @@ async function connectDB() {
     try {
         await mongoose.connect(MONGO_URI);
         console.log('[admin-server] MongoDB connected');
-        
+
         await Project.collection.createIndex({ order: 1 });
         await Member.collection.createIndex({ order: 1 });
         await Submission.collection.createIndex({ timestamp: -1 });
@@ -207,32 +207,45 @@ const AboutSchema = new mongoose.Schema({
 const AboutContent = mongoose.model('AboutContent', AboutSchema);
 
 // ELITE STATIC CACHE: Store data in memory for sub-millisecond delivery
+// Initialized with empty defaults to prevent 'null' pointer crashes
 let staticCache = {
-    projects: null,
-    logos: null,
-    team: null,
-    gallery: null,
-    socials: null,
-    about: null
+    projects: [],
+    logos: [],
+    team: [],
+    gallery: [],
+    socials: [],
+    about: {
+        whoWeAre: 'We are Webingix, a forward-thinking digital studio.',
+        vision: 'To be the catalyst for your digital success.',
+        approach: 'Client-first, transparent, and quality-driven.'
+    }
 };
 
 async function updateStaticCache() {
     console.log('[admin-server] Refreshing Infinity-Fast Static Cache...');
-    const [p, l, t, g, soc, ab] = await Promise.all([
-        Project.find().sort({ order: 1 }),
-        Logo.find().sort({ order: 1 }),
-        Member.find().sort({ order: 1 }),
-        GalleryImg.find().sort({ order: 1 }),
-        Social.find().sort({ order: 1 }),
-        AboutContent.findOne() || AboutContent.create({})
-    ]);
-    staticCache.projects = p;
-    staticCache.logos = l;
-    staticCache.team = t;
-    staticCache.gallery = g;
-    staticCache.socials = soc;
-    staticCache.about = ab;
-    console.log('[admin-server] Cache SYNC COMPLETE - Delivery at 0ms latency');
+    if (mongoose.connection.readyState !== 1) {
+        console.warn('[admin-server] Skip Cache Sync: MongoDB not connected.');
+        return;
+    }
+    try {
+        const [p, l, t, g, soc, ab] = await Promise.all([
+            Project.find().sort({ order: 1 }),
+            Logo.find().sort({ order: 1 }),
+            Member.find().sort({ order: 1 }),
+            GalleryImg.find().sort({ order: 1 }),
+            Social.find().sort({ order: 1 }),
+            AboutContent.findOne() || AboutContent.create({})
+        ]);
+        staticCache.projects = p || [];
+        staticCache.logos = l || [];
+        staticCache.team = t || [];
+        staticCache.gallery = g || [];
+        staticCache.socials = soc || [];
+        staticCache.about = ab || staticCache.about;
+        console.log('[admin-server] Cache SYNC COMPLETE');
+    } catch (err) {
+        console.error('[admin-server] Cache SYNC FAILED:', err.message);
+    }
 }
 
 // --- Server Utils ---
@@ -259,9 +272,9 @@ const tryServeDistFile = (res, pathname) => {
 const json = (res, statusCode, payload, extraHeaders = {}) => {
     const body = JSON.stringify(payload);
     const acceptEncoding = (res.req && res.req.headers) ? (res.req.headers['accept-encoding'] || '') : '';
-    
-    const headers = { 
-        'Content-Type': 'application/json', 
+
+    const headers = {
+        'Content-Type': 'application/json',
         ...extraHeaders,
         'Vary': 'Accept-Encoding'
     };
@@ -341,33 +354,51 @@ const server = http.createServer(async (req, res) => {
         } catch { return json(res, 500, { error: 'Internal Error' }, corsHeaders); }
     }
 
+    // Public API: Health Check
+    if (req.method === 'GET' && pathname === '/api/health') {
+        const dbState = ['disconnected', 'connected', 'connecting', 'disconnecting'][mongoose.connection.readyState];
+        return json(res, 200, { ok: true, database: dbState, cache: !!staticCache.projects.length }, corsHeaders);
+    }
+
     // Public API: Content Retrieval (ULTRA-FAST PERPETUAL STATIC CACHE: Sub-millisecond data delivery)
     if (req.method === 'GET' && pathname === '/api/projects') {
-        const data = staticCache.projects || await Project.find().sort({ order: 1 });
-        return json(res, 200, data, corsHeaders);
+        try {
+            const data = (mongoose.connection.readyState === 1 && !staticCache.projects.length) ? await Project.find().sort({ order: 1 }) : staticCache.projects;
+            return json(res, 200, data || [], corsHeaders);
+        } catch { return json(res, 200, staticCache.projects || [], corsHeaders); }
     }
     if (req.method === 'GET' && pathname === '/api/logos') {
-        const data = staticCache.logos || await Logo.find().sort({ order: 1 });
-        return json(res, 200, data, corsHeaders);
+        try {
+            const data = (mongoose.connection.readyState === 1 && !staticCache.logos.length) ? await Logo.find().sort({ order: 1 }) : staticCache.logos;
+            return json(res, 200, data || [], corsHeaders);
+        } catch { return json(res, 200, staticCache.logos || [], corsHeaders); }
     }
     if (req.method === 'GET' && pathname === '/api/team') {
-        const data = staticCache.team || await Member.find().sort({ order: 1 });
-        return json(res, 200, data, corsHeaders);
+        try {
+            const data = (mongoose.connection.readyState === 1 && !staticCache.team.length) ? await Member.find().sort({ order: 1 }) : staticCache.team;
+            return json(res, 200, data || [], corsHeaders);
+        } catch { return json(res, 200, staticCache.team || [], corsHeaders); }
     }
     if (req.method === 'GET' && pathname === '/api/gallery') {
-        const data = staticCache.gallery || await GalleryImg.find().sort({ order: 1 });
-        return json(res, 200, data, corsHeaders);
+        try {
+            const data = (mongoose.connection.readyState === 1 && !staticCache.gallery.length) ? await GalleryImg.find().sort({ order: 1 }) : staticCache.gallery;
+            return json(res, 200, data || [], corsHeaders);
+        } catch { return json(res, 200, staticCache.gallery || [], corsHeaders); }
     }
     if (req.method === 'GET' && pathname === '/api/socials') {
-        const data = staticCache.socials || await Social.find().sort({ order: 1 });
-        return json(res, 200, data, corsHeaders);
+        try {
+            const data = (mongoose.connection.readyState === 1 && !staticCache.socials.length) ? await Social.find().sort({ order: 1 }) : staticCache.socials;
+            return json(res, 200, data || [], corsHeaders);
+        } catch { return json(res, 200, staticCache.socials || [], corsHeaders); }
     }
     if (req.method === 'GET' && pathname === '/api/about') {
-        const data = staticCache.about || await AboutContent.findOne() || await AboutContent.create({});
-        return json(res, 200, data, corsHeaders);
+        try {
+            const data = (mongoose.connection.readyState === 1 && !staticCache.about.whoWeAre) ? await AboutContent.findOne() : staticCache.about;
+            return json(res, 200, data || staticCache.about, corsHeaders);
+        } catch { return json(res, 200, staticCache.about, corsHeaders); }
     }
     if (req.method === 'GET' && pathname === '/api/settings') {
-        return json(res, 200, { performanceTier: 'STATIC_ACCELERATED' }, corsHeaders);
+        return json(res, 200, { performanceTier: 'CACHE_ACCELERATED', databaseState: mongoose.connection.readyState }, corsHeaders);
     }
 
     // Admin Auth
@@ -445,11 +476,11 @@ const server = http.createServer(async (req, res) => {
         }
 
         // Generic Dynamic Handlers (Logos, Team, Gallery, Socials)
-        const entityMap = { 
-            '/api/admin/logos': { model: Logo, folder: 'brands' }, 
-            '/api/admin/team': { model: Member, folder: 'team' }, 
+        const entityMap = {
+            '/api/admin/logos': { model: Logo, folder: 'brands' },
+            '/api/admin/team': { model: Member, folder: 'team' },
             '/api/admin/gallery': { model: GalleryImg, folder: 'gallery' },
-            '/api/admin/socials': { model: Social, folder: 'socials' } 
+            '/api/admin/socials': { model: Social, folder: 'socials' }
         };
         for (const [pathKey, config] of Object.entries(entityMap)) {
             const Model = config.model;
@@ -461,9 +492,9 @@ const server = http.createServer(async (req, res) => {
                 if (imgField && b[imgField] && b[imgField].startsWith('data:image')) {
                     b[imgField] = await uploadToCloudinary(b[imgField], folder);
                 }
-                const d = await Model.create(b); 
+                const d = await Model.create(b);
                 await updateStaticCache(); // REFRESH CACHE
-                return json(res, 201, d, corsHeaders); 
+                return json(res, 201, d, corsHeaders);
             }
             if (pathname.startsWith(pathKey + '/')) {
                 const id = pathname.split('/').pop();
@@ -476,14 +507,14 @@ const server = http.createServer(async (req, res) => {
                         if (old && old[imgField]) await deleteFromCloudinary(old[imgField]);
                         b[imgField] = await uploadToCloudinary(b[imgField], folder);
                     }
-                    const d = await Model.findByIdAndUpdate(id, b, { new: true }); 
+                    const d = await Model.findByIdAndUpdate(id, b, { new: true });
                     await updateStaticCache(); // REFRESH CACHE
                     return json(res, 200, d, corsHeaders);
                 }
                 if (req.method === 'DELETE') {
                     const old = await Model.findById(id);
                     if (imgField && old && old[imgField]) await deleteFromCloudinary(old[imgField]);
-                    await Model.findByIdAndDelete(id); 
+                    await Model.findByIdAndDelete(id);
                     await updateStaticCache(); // REFRESH CACHE
                     return json(res, 200, { ok: true }, corsHeaders);
                 }
@@ -499,7 +530,7 @@ const server = http.createServer(async (req, res) => {
     if ((req.method === 'GET' || req.method === 'HEAD') && !pathname.startsWith('/api')) {
         // First try to serve the specific file (assets, logos, etc.)
         if (tryServeDistFile(res, pathname)) return;
-        
+
         // If no file found, serve index.html for React Router to handle the path (SPA catch-all)
         if (tryServeDistFile(res, '/')) return;
     }

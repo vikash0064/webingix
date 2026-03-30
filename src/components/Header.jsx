@@ -1,26 +1,10 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import Logo from './Logo';
 
-const Logo = () => {
+const LogoComponent = () => {
     return (
-        <svg width="350" height="100" viewBox="0 0 350 100" xmlns="http://www.w3.org/2000/svg" className="w-[35vw] h-auto md:w-[14vw]">
-            <rect x="8" y="9" width="334" height="79" fill="black" stroke="white" strokeWidth="1" />
-            <rect x="172" y="6" width="6" height="6" fill="black" stroke="white" strokeWidth="0.8" />
-            <rect x="172" y="85" width="6" height="6" fill="black" stroke="white" strokeWidth="0.8" />
-            <rect x="5" y="6" width="6" height="6" fill="black" stroke="white" strokeWidth="0.8" />
-            <rect x="339" y="6" width="6" height="6" fill="black" stroke="white" strokeWidth="0.8" />
-            <rect x="5" y="85" width="6" height="6" fill="black" stroke="white" strokeWidth="0.8" />
-            <rect x="339" y="85" width="6" height="6" fill="black" stroke="white" strokeWidth="0.8" />
-            <text x="50%" y="55%"
-                fontFamily="'Arial Black', Gadget, sans-serif"
-                fontSize="88" fontWeight="900"
-                dominantBaseline="middle"
-                textAnchor="middle"
-                textLength="300"
-                lengthAdjust="spacingAndGlyphs">
-                <tspan fill="white">WEBINGI</tspan><tspan fill="#39ff14">X</tspan>
-            </text>
-        </svg>
+        <Logo className="w-[35vw] h-auto md:w-[14vw] transition-all duration-300 hover:scale-[1.03] active:scale-95" />
     );
 }
 
@@ -41,7 +25,7 @@ const Header = () => {
                     className="flex items-center cursor-pointer select-none pointer-events-auto"
                     onClick={() => { navigate('/'); window.scrollTo(0, 0); }}
                 >
-                    <Logo />
+                    <LogoComponent />
                 </div>
 
                 {/* Nav */}
@@ -68,7 +52,7 @@ const Header = () => {
                             </a>
                         </li>
                     </ul>
-                    
+
                     {/* Desktop WhatsApp */}
                     <a
                         href="https://wa.me/918153929447"
