@@ -29,13 +29,13 @@ const Header = () => {
                 </div>
 
                 {/* Nav */}
-                <nav className="flex flex-col md:flex-row items-end md:items-center gap-1.5 md:gap-[1vw]">
-                    <ul className="flex flex-col md:flex-row md:items-center gap-1.5 md:gap-[.8vw] font-inter uppercase font-medium text-[10px] md:text-[min(1.2vw,18px)] text-[#F1F1F1] pointer-events-auto">
+                <nav className="flex flex-col md:flex-row items-end md:items-center gap-1.5 md:gap-[1.5vw]">
+                    <ul className="flex flex-col md:flex-row md:items-center items-end gap-1 md:gap-[1vw] font-inter uppercase font-medium text-[clamp(11px,3.4vw,16px)] text-[#F1F1F1] pointer-events-auto">
                         {navItems.map((item) => (
                             <li key={item.name} className="relative group">
                                 <Link
                                     to={item.href}
-                                    className="relative flex items-center leading-none py-[1vw] md:py-0 font-bold hover:text-white/70 transition-colors"
+                                    className="relative flex items-center leading-none py-1 md:py-0 font-bold hover:text-white/70 transition-colors uppercase"
                                 >
                                     {item.name},
                                 </Link>
@@ -46,7 +46,7 @@ const Header = () => {
                                 href="https://wa.me/918153929447"
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-[#6ADC01] font-bold py-[1vw]"
+                                className="text-[#39ff14] font-bold py-1 uppercase"
                             >
                                 WhatsApp
                             </a>
@@ -58,7 +58,7 @@ const Header = () => {
                         href="https://wa.me/918153929447"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="hidden md:flex text-[#6ADC01] text-[min(1.2vw,18px)] font-bold uppercase pointer-events-auto hover:opacity-80 transition-opacity"
+                        className="hidden md:flex text-[#39ff14] text-[min(1.2vw,18px)] font-bold uppercase pointer-events-auto hover:opacity-80 transition-opacity"
                     >
                         WhatsApp
                     </a>

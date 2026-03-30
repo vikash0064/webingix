@@ -21,7 +21,7 @@ const Team = () => {
     const { data: team = [] } = useQuery({ queryKey: ['team'], queryFn: async () => (await fetch('/api/team')).json() });
     const { data: logos = [] } = useQuery({ queryKey: ['logos'], queryFn: async () => (await fetch('/api/logos')).json() });
     const { data: gallery = [] } = useQuery({ queryKey: ['gallery'], queryFn: async () => (await fetch('/api/gallery')).json() });
-    
+
     const normalizeMember = (member, idx = 0) => {
         const fallback = defaultMembers[idx % defaultMembers.length] || {};
         const name = (member.name || fallback.name || `Member ${idx + 1}`).toString();
@@ -65,7 +65,7 @@ const Team = () => {
 
     const splitText = (text) => {
         return text.split(' ').map((word, wIdx) => (
-            <div key={wIdx} className="word inline-block mr-[0.12em] overflow-hidden align-top whitespace-nowrap">
+            <div key={wIdx} className="word inline-block mr-[0.12em] overflow-hidden align-top whitespace-nowrap flex-shrink-0 px-[0.05em]">
                 {word.split('').map((char, cIdx) => (
                     <span key={cIdx} className="char inline-block letter-anim">
                         {char}
@@ -172,22 +172,22 @@ const Team = () => {
         <div ref={containerRef} className="bg-[#0f0f0f] text-[#F1F1F1] min-h-screen pt-32 selection:bg-white selection:text-black">
             {/* Hero Section */}
             <section className="px-6 md:px-[3vw] pt-12 md:pt-6 pb-20 relative">
-                <h1 ref={titleRef} className="font-display text-[10vw] md:text-[min(8.5vw,160px)] tracking-[-0.02em] leading-[0.9] flex flex-col justify-center uppercase overflow-hidden">
-                    <span className="flex overflow-hidden items-center flex-nowrap whitespace-nowrap">
-                        {splitText('We Design the ')}
-                        <span className="char inline-block align-baseline ml-2">
+                <h1 ref={titleRef} className="font-display text-[clamp(1.5rem,9.2vw,4.5rem)] md:text-[min(8.5vw,160px)] tracking-[-0.02em] leading-[1.1] flex flex-col justify-center uppercase overflow-visible">
+                    <span className="flex overflow-visible items-center flex-nowrap whitespace-nowrap">
+                        {splitText('We Design the')}
+                        <span className="char inline-block align-baseline ml-[0.12em]">
                             <SwapText auto initialText="Business." finalText="Business." finalTextClassName="text-[#39ff14]" />
                         </span>
                     </span>
-                    <span className="flex overflow-hidden items-center flex-nowrap whitespace-nowrap">
-                        {splitText('We Develop the ')}
-                        <span className="char inline-block align-baseline ml-2">
+                    <span className="flex overflow-visible items-center flex-nowrap whitespace-nowrap md:mt-0">
+                        {splitText('We Develop the')}
+                        <span className="char inline-block align-baseline ml-[0.12em]">
                             <SwapText auto initialText="Experience." finalText="Experience." finalTextClassName="text-[#39ff14]" />
                         </span>
                     </span>
-                    <span className="flex overflow-hidden items-center flex-nowrap whitespace-nowrap">
-                        {splitText('We Deliver the ')}
-                        <span className="char inline-block align-baseline ml-2">
+                    <span className="flex overflow-visible items-center flex-nowrap whitespace-nowrap md:mt-0">
+                        {splitText('We Deliver the')}
+                        <span className="char inline-block align-baseline ml-[0.12em]">
                             <SwapText auto initialText="Brand." finalText="Brand." finalTextClassName="text-[#39ff14]" />
                         </span>
                     </span>
@@ -208,10 +208,14 @@ const Team = () => {
             <section className="pt-[20vw] pb-[20vw] md:pt-[6vw] md:pb-0 relative overflow-hidden">
                 <div className="px-6 md:px-[3vw]">
                     <div className="flex gap-[0.5vw] text-[14px] md:text-[17px] font-bold uppercase tracking-widest mb-8 text-[#5C5C5C]">01 / OUR ESTEEMED CLIENTS</div>
-                    <h2 className="font-display text-[15vw] md:text-[7.5vw] tracking-[-0.02em] leading-[1.12] uppercase reveal-text">
-                        <span className="flex overflow-hidden whitespace-nowrap flex-nowrap">{splitText('BRANDS THAT HAVE')}</span>
-                        <span className="flex overflow-hidden whitespace-nowrap flex-nowrap">{splitText('SUCCESSFULLY')}</span>
-                        <span className="flex items-center flex-wrap overflow-hidden whitespace-nowrap flex-nowrap">
+                    <h2 className="font-display text-[clamp(1.8rem,11.5vw,6rem)] md:text-[7.5vw] tracking-[-0.02em] leading-[1.1] uppercase reveal-text overflow-visible">
+                        <span className="flex overflow-visible whitespace-normal md:whitespace-nowrap flex-wrap md:flex-nowrap">
+                            {splitText('BRANDS THAT HAVE')}
+                        </span>
+                        <span className="flex overflow-visible whitespace-normal md:whitespace-nowrap flex-wrap md:flex-nowrap">
+                            {splitText('SUCCESSFULLY')}
+                        </span>
+                        <span className="flex items-center flex-wrap overflow-visible whitespace-normal md:whitespace-nowrap flex-nowrap">
                             {splitText('GONE LIVE')}
                             <img ref={globeRef} src="/globe.png" alt="Globe" className="h-auto object-contain inline-block w-0 opacity-0 scale-0 mx-2" />
                             {splitText('WITH US')}

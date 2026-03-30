@@ -310,10 +310,14 @@ const Contact = ({ isContactPage = false }) => {
                             <span>{contactLabel}</span>
                         </div>
 
-                        <div className="pl-[4vw] md:pl-[6vw] mb-[12vw] md:mb-[6vw] mt-[6vw] md:mt-[4vw] contact-secondary-heading">
-                            <h2 className="font-anton text-[18vw] md:text-[min(16vw,100px)] uppercase tracking-[0.02em] text-[#F1F1F1] flex flex-col gap-0 reveal-text leading-[0.9] whitespace-nowrap">
-                                <span className="flex overflow-hidden leading-[1] whitespace-nowrap flex-nowrap">{splitAnimatedLetters("LET'S GET")}</span>
-                                <span className="flex overflow-hidden leading-[1] pl-[28vw] md:pl-[8.5vw] whitespace-nowrap flex-nowrap">{splitAnimatedLetters("IN TOUCH")}</span>
+                        <div className="pl-[4vw] md:pl-[6vw] mb-[12vw] md:mb-[6vw] mt-[2vw] md:mt-[4vw] contact-secondary-heading overflow-visible">
+                            <h2 className="font-anton text-[clamp(2.5rem,15vw,100px)] md:text-[min(16vw,100px)] uppercase tracking-[0.02em] text-[#F1F1F1] flex flex-col gap-0 reveal-text leading-[0.9] overflow-visible">
+                                <span className="flex overflow-visible leading-[1.1] whitespace-nowrap md:whitespace-nowrap flex-nowrap">
+                                    {splitAnimatedLetters("LET'S GET")}
+                                </span>
+                                <span className="flex overflow-visible leading-[1.1] pl-[15vw] md:pl-[8.5vw] whitespace-nowrap md:whitespace-nowrap flex-nowrap">
+                                    {splitAnimatedLetters("IN TOUCH")}
+                                </span>
                             </h2>
                         </div>
 

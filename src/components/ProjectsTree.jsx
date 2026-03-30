@@ -1,6 +1,7 @@
 import React, { useLayoutEffect, useRef, useState, useEffect } from 'react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { motion } from 'framer-motion';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -151,12 +152,12 @@ const ProjectsTree = () => {
     return (
         <div ref={sectionRef} className="bg-[#151515] text-[#F1F1F1] relative overflow-hidden font-inter pt-[7vw]">
             <section className="relative px-[6vw] md:px-[4.5vw] py-[5vw] md:py-[4vw]">
-                {/* Desktop Ship Overlay */}
-                <div className="relative md:w-full">
-                    <h1 className="main-heading font-anton text-[15vw] md:text-[min(14vw,280px)] -tracking-[.1vw] leading-[1.05] flex flex-col uppercase z-[0] w-full">
-                        <span className="overflow-hidden block">{splitText("SITES WE'VE")}</span>
+                {/* Desktop Heading Overlay */}
+                <div className="hidden md:block relative w-full">
+                    <h1 className="main-heading font-anton text-[min(14vw,280px)] -tracking-[.1vw] leading-[1.05] flex flex-col uppercase z-[0] w-full">
+                        <span className="overflow-visible block">{splitText("SITES WE'VE")}</span>
                         <span className="flex justify-end -mt-[2vw]">
-                            <span className="overflow-hidden block">{splitText("SHIPPED")}</span>
+                            <span className="overflow-visible block">{splitText("SHIPPED")}</span>
                         </span>
                     </h1>
                     {/* Ship image overlays heading on desktop */}
@@ -164,27 +165,34 @@ const ProjectsTree = () => {
                         ref={headingImgRef}
                         src="/ship.webp"
                         alt="Ship"
-                        className="absolute hidden md:block right-[7.5%] bottom-[37.5%] w-[12vw] -translate-x-[70%] -translate-y-[10%] z-[1]"
+                        className="absolute right-[7.5%] bottom-[37.5%] w-[12vw] -translate-x-[70%] -translate-y-[10%] z-[1]"
                         style={{ minWidth: '80px', maxWidth: '180px' }}
                     />
                 </div>
-                {/* Mobile Ship Above Heading */}
-                <div className="pt-[2vw] relative md:w-[60%] md:hidden">
-                    <img
-                        src="/ship.webp"
-                        alt="Ship Image"
-                        className="heading-img-mobile absolute bottom-0 w-[25vw] left-1/4 translate-x-[35%] -translate-y-[90%] z-[2]"
-                        style={{ minWidth: '80px', maxWidth: '180px' }}
-                    />
-                    <h1 className="main-heading-mobile font-anton -tracking-[.1vw] leading-[1.12] flex flex-col">
-                        <span className="overflow-hidden text-[9vw] !inline-flex justify-between">
-                            <span>{splitText("SITES")}</span>
-                            <span>{splitText("WE'VE")}</span>
-                        </span>
-                        <span className="overflow-hidden text-[15vw]">
+
+                {/* Mobile Ship and Heading */}
+                <div className="md:hidden pt-[14vw] pb-[10vw] relative w-full overflow-visible px-4">
+                    <motion.div
+                        initial={{ opacity: 0, y: 30 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.8, ease: "easeOut" }}
+                        className="main-heading-mobile font-anton uppercase tracking-tight flex flex-col w-full items-center overflow-visible"
+                    >
+                        <div className="relative flex items-center justify-center gap-[1vw] w-full text-[13.5vw] leading-[1] overflow-visible whitespace-nowrap px-1">
+                            <span className="flex overflow-visible">{splitText("SITES")}</span>
+                            <motion.div
+                                animate={{ y: [-6, 2, -6] }}
+                                transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut" }}
+                                className="absolute left-1/2 top-[42%] -translate-x-1/2 -translate-y-1/2 w-[21vw] max-w-[112px] min-w-[80px] drop-shadow-xl z-[2] pointer-events-none"
+                            >
+                                <img src="/ship.webp" alt="Ship" className="w-full h-auto" />
+                            </motion.div>
+                            <span className="flex overflow-visible">{splitText("WE'VE")}</span>
+                        </div>
+                        <div className="text-[23vw] leading-[0.9] mt-[0.6vw] overflow-visible tracking-[-.02em] whitespace-nowrap flex justify-center">
                             {splitText("SHIPPED")}
-                        </span>
-                    </h1>
+                        </div>
+                    </motion.div>
                 </div>
             </section>
 
