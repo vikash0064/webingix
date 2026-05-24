@@ -544,4 +544,56 @@ const server = http.createServer(async (req, res) => {
     json(res, 404, { error: 'Not found' }, corsHeaders);
 });
 
-server.listen(PORT, '0.0.0.0', () => console.log(`[admin-server] Listening on port ${PORT}`));
+server.listen(PORT, '0.0.0.0', () => {
+    console.log(`[admin-server] Listening on port ${PORT}`);
+
+    // ─── RENDER FREE TIER: KEEP-ALIVE SELF-PING ────────────────────────────────
+    // Render ki free hosting 15 min inactivity pe server sleep kar deti hai.
+    // Ye mechanism har 14 minutes pe apne aap ko ping karta hai taaki server
+    // hamesha jaag ta rahe aur website bina delay ke khule.
+    const RENDER_URL = process.env.RENDER_EXTERNAL_URL || `http://localhost:${PORT}`;
+    const KEEP_ALIVE_INTERVAL_MS = 14 * 60 * 1000; // 14 minutes
+
+    const keepAlive = () => {
+        const pingUrl = `${RENDER_URL}/api/ping`;
+        const isHttps = pingUrl.startsWith('https');
+
+        const urlObj = new URL(pingUrl);
+        const options = {
+            hostname: urlObj.hostname,
+            port: urlObj.port || (isHttps ? 443 : 80),
+            path: urlObj.pathname,
+            method: 'GET',
+            timeout: 10000,
+        };
+
+        const makeRequest = (mod) => {
+            const req = mod.request(options, (res) => {
+                console.log(`[keep-alive] Ping OK — status: ${res.statusCode} @ ${new Date().toISOString()}`);
+                res.resume(); // consume response to free memory
+            });
+            req.on('error', (err) => {
+                console.warn(`[keep-alive] Ping failed: ${err.message}`);
+            });
+            req.on('timeout', () => {
+                console.warn('[keep-alive] Ping timed out');
+                req.destroy();
+            });
+            req.end();
+        };
+
+        if (isHttps) {
+            import('node:https').then(mod => makeRequest(mod.default)).catch(() => {});
+        } else {
+            makeRequest(http);
+        }
+    };
+
+    // Start keep-alive loop after 1 minute (let server fully boot first)
+    setTimeout(() => {
+        keepAlive(); // first ping
+        setInterval(keepAlive, KEEP_ALIVE_INTERVAL_MS);
+        console.log(`[keep-alive] Self-ping activated every 14 min → ${RENDER_URL}/api/ping`);
+    }, 60 * 1000);
+    // ────────────────────────────────────────────────────────────────────────────
+});
