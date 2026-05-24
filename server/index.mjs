@@ -360,6 +360,11 @@ const server = http.createServer(async (req, res) => {
         return json(res, 200, { ok: true, database: dbState, cache: !!staticCache.projects.length }, corsHeaders);
     }
 
+    // Public API: Keep-Alive Ping
+    if (req.method === 'GET' && pathname === '/api/ping') {
+        return json(res, 200, { ok: true, timestamp: Date.now() }, corsHeaders);
+    }
+
     // Public API: Content Retrieval (ULTRA-FAST PERPETUAL STATIC CACHE: Sub-millisecond data delivery)
     if (req.method === 'GET' && pathname === '/api/projects') {
         try {
