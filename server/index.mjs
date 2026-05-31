@@ -583,7 +583,7 @@ server.listen(PORT, '0.0.0.0', () => {
         };
 
         if (isHttps) {
-            import('node:https').then(mod => makeRequest(mod.default)).catch(() => {});
+            import('node:https').then(mod => makeRequest(mod.default)).catch(() => { });
         } else {
             makeRequest(http);
         }

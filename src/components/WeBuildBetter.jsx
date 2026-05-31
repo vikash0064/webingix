@@ -265,46 +265,45 @@ const WeBuildBetter = () => {
                             className="w-full bg-[#0f0f0f] border-t border-[#FFFFFF] overflow-hidden min-h-[75vh] pb-[5vw] project-card absolute left-0 will-change-transform"
                         >
                             {['tl', 'tr', 'br', 'bl'].map((corner) => renderCorner(corner))}
-                            <div className="section-inner flex justify-between mx-auto md:px-[1vw] pt-[1vw] gap-[10vw]">
-                                <div className="card-inner flex gap-[16vw] flex-1 pl-0">
-                                    <p className="font-sans font-light text-[min(1.5vw,24px)] text-white">{project.id}</p>
-                                    <div className="flex flex-col gap-[2vw]">
+                            <div className="section-inner flex justify-between mx-auto md:px-[1vw] pt-[1vw] gap-[6vw]">
+                                <div className="card-inner flex gap-[8vw] xl:gap-[12vw] flex-1 pl-0 min-w-0">
+                                    <p className="font-sans font-light text-[min(1.5vw,24px)] text-white flex-shrink-0">{project.id}</p>
+                                    <div className="flex flex-col gap-[2vw] min-w-0">
                                         <p className="font-anton text-[min(3.5vw,60px)] text-white uppercase origin-top-left">
                                             {project.title}
                                         </p>
                                         <div className="flex flex-col gap-[.75vw]">
                                             <div className="flex gap-[1vw]">
-                                                <div className="flex flex-col items-center">
+                                                <div className="flex flex-col items-center flex-shrink-0">
                                                     <div className="rounded-full w-[3vw] aspect-square bg-[#333] overflow-hidden flex items-center justify-center">
                                                         <span className="text-white font-bold">{(project.title || 'P')[0]}</span>
                                                     </div>
                                                     <div className="flex-1 w-px bg-[#454545] mx-auto mt-[.5vw]"></div>
                                                 </div>
-                                                <div className="mt-[.5vw] pb-[2vw]">
+                                                <div className="mt-[.5vw] pb-[2vw] min-w-0">
                                                     <div className="flex gap-[.75vw] items-center">
                                                         <p className="font-sans text-[min(1.1vw,18px)] font-bold text-white uppercase">{project.title}</p>
-                                                        <span className="w-[.25vw] aspect-square rounded-full bg-[#FFFFFF]"></span>
+                                                        <span className="w-[.25vw] aspect-square rounded-full bg-[#FFFFFF] flex-shrink-0"></span>
                                                         <p className="font-sans text-[min(1.1vw,18px)] font-light text-white/80">{project.time}</p>
                                                     </div>
-                                                    <p className="font-sans text-[min(1.1vw,18px)] text-white mt-[1vw] leading-[1.5] md:max-w-[40vw]">
+                                                    <p className="font-sans text-[min(1.1vw,18px)] text-white mt-[1vw] leading-[1.5] max-w-[32vw]">
                                                         {project.clientMsg}
                                                     </p>
                                                 </div>
                                             </div>
                                             <div className="flex gap-[1vw]">
-                                                <div className="flex flex-col items-center">
+                                                <div className="flex flex-col items-center flex-shrink-0">
                                                     <div className="rounded-full w-[3vw] aspect-square bg-white overflow-hidden flex items-center justify-center">
                                                         <span className="text-black font-black text-[1.2vw] leading-none">W</span>
                                                     </div>
-                                                    <div className="hidden md:block flex-1 w-px bg-transparent mx-auto mt-[.5vw]"></div>
                                                 </div>
-                                                <div className="mt-[.5vw] pb-[2vw]">
+                                                <div className="mt-[.5vw] pb-[2vw] min-w-0">
                                                     <div className="flex gap-[.75vw] items-center">
                                                         <p className="font-sans text-[min(1.1vw,18px)] font-bold text-white uppercase">{AGENCY_NAME}</p>
-                                                        <span className="w-[.25vw] aspect-square rounded-full bg-[#FFFFFF]"></span>
+                                                        <span className="w-[.25vw] aspect-square rounded-full bg-[#FFFFFF] flex-shrink-0"></span>
                                                         <p className="font-sans text-[min(1.1vw,18px)] font-light text-white/80">{project.time}</p>
                                                     </div>
-                                                    <p className="font-sans text-[min(1.1vw,18px)] text-white mt-[1vw] leading-[1.5] md:max-w-[40vw]">
+                                                    <p className="font-sans text-[min(1.1vw,18px)] text-white mt-[1vw] leading-[1.5] max-w-[32vw]">
                                                         {project.ourMsg}
                                                     </p>
                                                 </div>
@@ -312,16 +311,20 @@ const WeBuildBetter = () => {
                                         </div>
                                     </div>
                                 </div>
-                                <div className="w-[27.5%] flex-shrink-0 flex pb-0 relative group">
-                                    <div className="w-full h-full border-[8px] border-white aspect-[4/3] overflow-hidden">
-                                        <img src={project.image} alt={project.title} className="w-full h-full object-cover" />
+                                <div className="w-[28vw] max-w-[420px] flex-shrink-0 flex flex-col pb-6 relative">
+                                    <div className="w-full border-[6px] border-white overflow-hidden">
+                                        <img
+                                            src={project.image}
+                                            alt={project.title}
+                                            className="w-full h-auto block"
+                                        />
                                     </div>
                                     {project.link && (
                                         <a
                                             href={project.link}
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            className="absolute -bottom-[2.5vw] right-0 bg-[#39FF14] text-black px-[1vw] py-[0.4vw] text-[min(0.8vw,12px)] font-black uppercase tracking-widest hover:bg-white transition-colors pointer-events-auto"
+                                            className="mt-3 self-end bg-[#39FF14] text-black px-[1vw] py-[0.4vw] text-[min(0.8vw,12px)] font-black uppercase tracking-widest hover:bg-white transition-colors pointer-events-auto"
                                         >
                                             Visit Live
                                         </a>
